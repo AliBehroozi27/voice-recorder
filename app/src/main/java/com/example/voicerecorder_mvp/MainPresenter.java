@@ -21,6 +21,11 @@ import top.oply.opuslib.OpusRecorder;
 
 public class MainPresenter implements MainContract.Presenter {
 
+    private static final int LOWER_LIMIT_RECORDING_TIME_MILLISECONDS = 900;
+    private static final int SEEK_BAR_UPDATE_DELAY = 5;
+    private static final int INITIAL_PROGRESS = 0;
+    private static final int START_TIMER_DELAY = 300;
+    private static final int UPPER_LIMIT_RECORDING_TIME_MILLISECONDS = 600000;
     public boolean isUserSeeking = false;
     private MainActivity view;
     private OpusRecorder mediaRecorder;
@@ -47,7 +52,7 @@ public class MainPresenter implements MainContract.Presenter {
         if (seekBarSubject == null) {
             seekBarSubject = BehaviorSubject.create();
             seekBarSubject
-                    .delay(5, TimeUnit.MILLISECONDS)
+                    .delay(SEEK_BAR_UPDATE_DELAY, TimeUnit.MILLISECONDS)
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribeOn(Schedulers.io())
                     .subscribe(new Observer<Integer>() {
@@ -84,13 +89,6 @@ public class MainPresenter implements MainContract.Presenter {
 
     @Override
     public void initialMediaRecorder() {
-//        mediaRecorder = new MediaRecorder();
-//        mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-//        mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
-//        mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
-//        mediaRecorder.setAudioEncodingBitRate(22050);
-//        mediaRecorder.setAudioSamplingRate(44100 * 16);
-//        mediaRecorder.setAudioChannels(1);
         initialFileName();
         mediaRecorder = OpusRecorder.getInstance();
     }
@@ -104,6 +102,7 @@ public class MainPresenter implements MainContract.Presenter {
         fileName = root.getAbsolutePath() + "/VoiceRecorderSimplifiedCoding/Audios/" + String.valueOf(System.currentTimeMillis() + ".ogg");
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void initialMediaPlayer() {
         mediaPlayer = new MediaPlayer();
@@ -114,13 +113,17 @@ public class MainPresenter implements MainContract.Presenter {
             e.printStackTrace();
         }
 
-        view.prepareForPlaying();
+        if (mediaPlayer.getDuration() < LOWER_LIMIT_RECORDING_TIME_MILLISECONDS) {
+            cancelRecording();
+        } else {
+            view.prepareForPlaying();
+        }
 
         mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
             @Override
             public void onCompletion(MediaPlayer mp) {
                 stopPlay();
-                setLastProgress(0);
+                setLastProgress(INITIAL_PROGRESS);
             }
         });
     }
@@ -128,21 +131,13 @@ public class MainPresenter implements MainContract.Presenter {
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void record() {
-
+        Log.e("AAA" , "start recording");
         if (mediaRecorder == null)
             initialMediaRecorder();
         view.prepareForRecording();
 
         mediaRecorder.startRecording(fileName);
         isRecording = true;
-
-//        try {
-//            mediaRecorder.prepare();
-//            mediaRecorder.start();
-//            isRecording = true;
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
 
         view.startRecording();
 
@@ -163,16 +158,16 @@ public class MainPresenter implements MainContract.Presenter {
                 if (timer != null) {
                     timer.start();
                 } else {
-                    cancelRecording();
+                    //cancelRecording();
                 }
             }
-        }, 400);
+        }, START_TIMER_DELAY);
     }
 
     @Override
     public void initTimer() {
         if (timer == null) {
-            timer = new CountDownTimer(300000, 1000) {
+            timer = new CountDownTimer(UPPER_LIMIT_RECORDING_TIME_MILLISECONDS, 1000) {
                 public void onTick(long millisUntilFinished) {
                     int seconds = time;
                     int minutes = seconds / 60;
@@ -191,23 +186,20 @@ public class MainPresenter implements MainContract.Presenter {
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void stopRecord() {
+        Log.e("AAA" , "stop recording");
+
         timer.cancel();
         view.prepareForStop();
 
         isRecording = false;
         mediaRecorder.stopRecording();
-//        try {
-//            mediaRecorder.stop();
-//            mediaRecorder.release();
-//            isRecording = false;
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
+
         mediaRecorder = null;
         timer = null;
         initialMediaPlayer();
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void play() {
         if (mediaPlayer == null)
@@ -224,6 +216,8 @@ public class MainPresenter implements MainContract.Presenter {
 
     @Override
     public void startPlay() {
+        Log.e("AAA" , "start playing");
+
         isPlaying = true;
         mediaPlayer.start();
         view.startPlaying();
@@ -232,6 +226,8 @@ public class MainPresenter implements MainContract.Presenter {
 
     @Override
     public void stopPlay() {
+        Log.e("AAA" , "top playing");
+
         isPlaying = false;
 
         setLastProgress(mediaPlayer.getCurrentPosition());
@@ -259,6 +255,8 @@ public class MainPresenter implements MainContract.Presenter {
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void cancelRecording() {
+        Log.e("AAA" , "cancel recording");
+
         if (mediaRecorder != null) mediaRecorder.release();
         if (timer != null) timer.cancel();
         mediaRecorder = null;

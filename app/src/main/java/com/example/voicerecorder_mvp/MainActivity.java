@@ -12,6 +12,7 @@ import android.support.annotation.NonNull;
 import android.support.annotation.RequiresApi;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.transition.TransitionManager;
 import android.view.MotionEvent;
@@ -30,24 +31,13 @@ import butterknife.OnClick;
 
 public class MainActivity extends AppCompatActivity implements MainContract.View {
 
-    @BindView(R.id.toolbar)
-    Toolbar toolbar;
-    @BindView(R.id.timer)
-    TextView timerTv;
-    @BindView(R.id.recording_state)
-    TextView recordingStateTv;
-    @BindView(R.id.linear_layout_recorder)
-    LinearLayout recorderLl;
-    @BindView(R.id.image_view_record)
-    ImageView recordIv;
-    @BindView(R.id.image_view_stop)
-    ImageView stopIv;
-    @BindView(R.id.image_view_play)
-    ImageView playIv;
-    @BindView(R.id.playLl)
-    LinearLayout playLl;
-    @BindView(R.id.seekBar)
-    SeekBar seekBar;
+
+    @BindView(R.id.recycler_view)
+    RecyclerView messagesRv;
+    @BindView(R.id.message_area)
+    TextView messageArea;
+    @BindView(R.id.record_button)
+    ImageView recordButton;
     @BindString(R.string.start_time)
     String startTime;
 
@@ -109,10 +99,6 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
     @SuppressLint("ClickableViewAccessibility")
     @Override
     public void initViews() {
-        toolbar.setTitle("Voice Recorder");
-        toolbar.setTitleTextColor(getResources().getColor(android.R.color.black));
-        setSupportActionBar(toolbar);
-
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
@@ -141,13 +127,13 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
             }
         });
 
-        recordIv.setOnTouchListener(new View.OnTouchListener() {
+        recordButton.setOnTouchListener(new View.OnTouchListener() {
             @RequiresApi(api = Build.VERSION_CODES.KITKAT)
             @Override
             public boolean onTouch(View v, MotionEvent event) {
 
                 if (event.getActionMasked() == MotionEvent.ACTION_UP) {
-                    recordingStateTv.setVisibility(View.INVISIBLE);
+                    messageArea.setVisibility(View.INVISIBLE);
                     if (event.getY() > positionY + 150) {
                         //cancel recording
                         presenter.cancelRecording();
@@ -163,20 +149,20 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
 
                 if (event.getAction() == MotionEvent.ACTION_MOVE) {
                     if (event.getY() > positionY + 150) {
-                        recordingStateTv.setText("Cancel");
-                        recordingStateTv.setTextColor(Color.parseColor("#FF2196F3"));
+                        messageArea.setText("Cancel");
+                        messageArea.setTextColor(Color.parseColor("#FF2196F3"));
                     } else if (event.getY() < positionY - 150) {
-                        recordingStateTv.setText("Lock");
-                        recordingStateTv.setTextColor(Color.parseColor("#FFCC1F1F"));
+                        messageArea.setText("Lock");
+                        messageArea.setTextColor(Color.parseColor("#FFCC1F1F"));
                     } else {
-                        recordingStateTv.setText("Recording");
-                        recordingStateTv.setTextColor(Color.parseColor("#FFA8A8A8"));
+                        messageArea.setText("Recording");
+                        messageArea.setTextColor(Color.parseColor("#FFA8A8A8"));
                     }
                     return true;
                 }
 
                 if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
-                    recordingStateTv.setVisibility(View.VISIBLE);
+                    messageArea.setVisibility(View.VISIBLE);
                     positionY = event.getY();
                     presenter.record();
                     return true;
@@ -193,6 +179,7 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
         presenter.stopRecord();
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @OnClick(R.id.image_view_play)
     public void onPlayClick() {
         presenter.play();
@@ -225,7 +212,7 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
     @Override
     public void prepareForStop() {
         TransitionManager.beginDelayedTransition(recorderLl);
-        recordIv.setVisibility(View.VISIBLE);
+        recordButton.setVisibility(View.VISIBLE);
         stopIv.setVisibility(View.GONE);
         playLl.setVisibility(View.VISIBLE);
     }
@@ -234,7 +221,7 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
     @Override
     public void prepareForCancel() {
         TransitionManager.beginDelayedTransition(recorderLl);
-        recordIv.setVisibility(View.VISIBLE);
+        recordButton.setVisibility(View.VISIBLE);
         stopIv.setVisibility(View.GONE);
         playLl.setVisibility(View.GONE);
         timerTv.setText(startTime);
