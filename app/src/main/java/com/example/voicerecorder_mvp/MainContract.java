@@ -9,9 +9,9 @@ public interface MainContract {
     interface View {
         void initViews();
 
-        void initTimer();
-
         void getPermission();
+
+        void setTimerTv(String time);
 
         void prepareForRecording();
 
@@ -20,8 +20,6 @@ public interface MainContract {
         void startRecording();
 
         void prepareForStop();
-
-        void stopRecording();
 
         void startPlaying();
 
@@ -32,6 +30,7 @@ public interface MainContract {
         void setSeekBarProgress(int currentPosition);
 
         void cancelRecording();
+
     }
 
     interface Presenter {
@@ -52,6 +51,8 @@ public interface MainContract {
         void startPlay();
 
         void stopPlay();
+
+        void initTimer();
 
         void seek(int lastProgress);
 

@@ -1,39 +1,37 @@
 package com.example.voicerecorder_mvp;
 
 import android.media.MediaPlayer;
-import android.media.MediaRecorder;
-import android.media.MediaTimestamp;
 import android.os.Build;
+import android.os.CountDownTimer;
 import android.os.Environment;
-import android.support.annotation.NonNull;
+import android.os.Handler;
 import android.support.annotation.RequiresApi;
 import android.util.Log;
-import android.view.View;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
-import io.reactivex.Observable;
 import io.reactivex.Observer;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
-import io.reactivex.functions.Consumer;
 import io.reactivex.schedulers.Schedulers;
 import io.reactivex.subjects.BehaviorSubject;
-import io.reactivex.subjects.PublishSubject;
-import io.reactivex.subjects.Subject;
+import top.oply.opuslib.OpusRecorder;
 
 public class MainPresenter implements MainContract.Presenter {
 
     public boolean isUserSeeking = false;
     private MainActivity view;
-    private MediaRecorder mediaRecorder;
+    private OpusRecorder mediaRecorder;
     private String fileName;
     private boolean isPlaying;
     private MediaPlayer mediaPlayer;
     private int lastProgress = 0;
     private BehaviorSubject<Integer> seekBarSubject;
+    private boolean isRecording;
+    private CountDownTimer timer;
+    private int time;
 
     @RequiresApi(api = Build.VERSION_CODES.M)
     public MainPresenter(MainActivity view) {
@@ -86,20 +84,24 @@ public class MainPresenter implements MainContract.Presenter {
 
     @Override
     public void initialMediaRecorder() {
-        mediaRecorder = new MediaRecorder();
-        mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-        mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
-        mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
-        mediaRecorder.setAudioEncodingBitRate(44100);
-        mediaRecorder.setAudioSamplingRate(48000);
+//        mediaRecorder = new MediaRecorder();
+//        mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+//        mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+//        mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+//        mediaRecorder.setAudioEncodingBitRate(22050);
+//        mediaRecorder.setAudioSamplingRate(44100 * 16);
+//        mediaRecorder.setAudioChannels(1);
+        initialFileName();
+        mediaRecorder = OpusRecorder.getInstance();
+    }
+
+    private void initialFileName() {
         File root = Environment.getExternalStorageDirectory();
         File file = new File(root.getAbsolutePath() + "/VoiceRecorderSimplifiedCoding/Audios");
         if (!file.exists()) {
             file.mkdirs();
         }
         fileName = root.getAbsolutePath() + "/VoiceRecorderSimplifiedCoding/Audios/" + String.valueOf(System.currentTimeMillis() + ".ogg");
-        mediaRecorder.setOutputFile(fileName);
-
     }
 
     @Override
@@ -126,35 +128,83 @@ public class MainPresenter implements MainContract.Presenter {
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void record() {
+
         if (mediaRecorder == null)
             initialMediaRecorder();
         view.prepareForRecording();
 
-        try {
-            mediaRecorder.prepare();
-            mediaRecorder.start();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        mediaRecorder.startRecording(fileName);
+        isRecording = true;
+
+//        try {
+//            mediaRecorder.prepare();
+//            mediaRecorder.start();
+//            isRecording = true;
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
 
         view.startRecording();
+
+        if (timer == null)
+            initTimer();
+
+        startTimer();
+
+
+    }
+
+    private void startTimer() {
+        Handler handler = new Handler();
+        handler.postDelayed(new Runnable() {
+            @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+            @Override
+            public void run() {
+                if (timer != null) {
+                    timer.start();
+                } else {
+                    cancelRecording();
+                }
+            }
+        }, 400);
+    }
+
+    @Override
+    public void initTimer() {
+        if (timer == null) {
+            timer = new CountDownTimer(300000, 1000) {
+                public void onTick(long millisUntilFinished) {
+                    int seconds = time;
+                    int minutes = seconds / 60;
+                    seconds = seconds - (minutes * 60);
+                    view.setTimerTv(minutes + ":" + checkDigit(seconds));
+                    time++;
+                }
+
+                public void onFinish() {
+                }
+            };
+        }
     }
 
 
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void stopRecord() {
+        timer.cancel();
         view.prepareForStop();
 
-        try {
-            mediaRecorder.stop();
-            mediaRecorder.release();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        isRecording = false;
+        mediaRecorder.stopRecording();
+//        try {
+//            mediaRecorder.stop();
+//            mediaRecorder.release();
+//            isRecording = false;
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
         mediaRecorder = null;
-
-        view.stopRecording();
+        timer = null;
         initialMediaPlayer();
     }
 
@@ -175,7 +225,6 @@ public class MainPresenter implements MainContract.Presenter {
     @Override
     public void startPlay() {
         isPlaying = true;
-
         mediaPlayer.start();
         view.startPlaying();
         getSeekBarSubject().onNext(lastProgress);
@@ -210,11 +259,19 @@ public class MainPresenter implements MainContract.Presenter {
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void cancelRecording() {
-        mediaRecorder.stop();
+        if (mediaRecorder != null) mediaRecorder.release();
+        if (timer != null) timer.cancel();
         mediaRecorder = null;
+        timer = null;
         view.prepareForCancel();
         view.cancelRecording();
     }
+
+
+    private String checkDigit(int number) {
+        return number <= 9 ? "0" + number : String.valueOf(number);
+    }
+
 
     public int getLastProgress() {
         return lastProgress;
@@ -222,5 +279,13 @@ public class MainPresenter implements MainContract.Presenter {
 
     public void setLastProgress(int lastProgress) {
         this.lastProgress = lastProgress;
+    }
+
+    public int getTime() {
+        return time;
+    }
+
+    public void setTime(int time) {
+        this.time = time;
     }
 }
