@@ -8,18 +8,19 @@
     <TextView
         android:id="@+id/message_area"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:paddingLeft="10dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="center_horizontal"
         android:layout_weight="1"
         android:hint="record a voice"
-        android:maxHeight="80dp"
+        android:paddingStart="10dp"
+        android:paddingLeft="10dp"
         android:textColor="#CFD8DC"
         android:textColorHint="#CFD8DC"
-        android:paddingStart="10dp" />
+        android:textSize="20sp" />
 
     <ImageView
         android:id="@+id/record_button"
+
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_weight="4"

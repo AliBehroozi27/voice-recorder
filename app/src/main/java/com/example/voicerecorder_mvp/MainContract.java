@@ -1,11 +1,22 @@
 package com.example.voicerecorder_mvp;
 
 import java.io.IOException;
+import java.util.List;
 
 import io.reactivex.subjects.BehaviorSubject;
 import io.reactivex.subjects.PublishSubject;
 
 public interface MainContract {
+    interface Adapter {
+        void startPlaying();
+
+        void setSeekBarProgress(Integer integer);
+
+        void stopPlaying();
+
+    }
+
+
     interface View {
         void initViews();
 
@@ -31,9 +42,13 @@ public interface MainContract {
 
         void cancelRecording();
 
+        void initRecyclerView(List<VoiceMessage> voiceMessages);
     }
 
     interface Presenter {
+
+        void initViews();
+
         void requestPermission();
 
         void record() throws IOException;
@@ -46,7 +61,7 @@ public interface MainContract {
 
         void stopRecord();
 
-        void play();
+        void play(int position);
 
         void startPlay();
 
@@ -59,5 +74,9 @@ public interface MainContract {
         int getMediaPlayerDuration();
 
         void cancelRecording();
+
+        VoiceMessage getVoiceMessage();
+
+        void setAdapterView(ChatRvAdapter chatAdapter);
     }
 }

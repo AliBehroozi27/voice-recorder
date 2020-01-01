@@ -10,17 +10,28 @@
     <ScrollView
         android:id="@+id/scrollView"
         android:layout_width="match_parent"
+        android:paddingTop="2dp"
         android:layout_height="0dp"
         android:layout_weight="20"
-        app:layout_constraintBottom_toTopOf="@+id/include"
+        app:layout_constraintBottom_toTopOf="@+id/seperator"
         app:layout_constraintTop_toTopOf="parent">
 
         <android.support.v7.widget.RecyclerView
+            android:layout_gravity="right"
+            tools:itemCount="50"
             android:id="@+id/recycler_view"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            tools:listitem="@layout/voice_item"/>
+            tools:listitem="@layout/voice_item" />
     </ScrollView>
+
+
+    <View
+        android:id="@+id/seperator"
+        android:layout_width="match_parent"
+        android:layout_height="2dp"
+        android:background="#C9C3C3"
+        app:layout_constraintBottom_toTopOf="@+id/include" />
 
     <include
         android:id="@+id/include"
@@ -28,9 +39,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="bottom"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintBottom_toBottomOf="parent" />
 
 
 </android.support.constraint.ConstraintLayout>

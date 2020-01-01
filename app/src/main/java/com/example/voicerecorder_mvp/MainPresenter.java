@@ -10,6 +10,9 @@ import android.util.Log;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.AbstractList;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import io.reactivex.Observer;
@@ -28,8 +31,10 @@ public class MainPresenter implements MainContract.Presenter {
     private static final int UPPER_LIMIT_RECORDING_TIME_MILLISECONDS = 600000;
     public boolean isUserSeeking = false;
     private MainActivity view;
+    private ChatRvAdapter adapterView;
     private OpusRecorder mediaRecorder;
     private String fileName;
+    private int position;
     private boolean isPlaying;
     private MediaPlayer mediaPlayer;
     private int lastProgress = 0;
@@ -37,10 +42,21 @@ public class MainPresenter implements MainContract.Presenter {
     private boolean isRecording;
     private CountDownTimer timer;
     private int time;
+    private List<VoiceMessage> voiceMessages;
+    private VoiceMessage voiceMessage;
+    private int currentVoiceIndex = 1;
 
     @RequiresApi(api = Build.VERSION_CODES.M)
     public MainPresenter(MainActivity view) {
         this.view = view;
+        getAllVoices();
+
+    }
+
+    @Override
+    public void initViews() {
+        view.initRecyclerView(voiceMessages);
+
     }
 
     public MediaPlayer getMediaPlayer() {
@@ -63,7 +79,10 @@ public class MainPresenter implements MainContract.Presenter {
                         @Override
                         public void onNext(Integer integer) {
                             if (mediaPlayer != null && !isUserSeeking) {
-                                view.setSeekBarProgress(integer);
+                                voiceMessage.setLastProgress(integer);
+                                voiceMessages.set(position, voiceMessage);
+                                //adapterView.notifyDataSetChanged();
+                                adapterView.notifyItemRangeChanged(position, 1);
                                 getSeekBarSubject().onNext(mediaPlayer.getCurrentPosition());
                             }
                         }
@@ -107,23 +126,30 @@ public class MainPresenter implements MainContract.Presenter {
     public void initialMediaPlayer() {
         mediaPlayer = new MediaPlayer();
         try {
-            mediaPlayer.setDataSource(fileName);
+            if (isRecording) {
+                mediaPlayer.setDataSource(fileName);
+            } else {
+                mediaPlayer.setDataSource(voiceMessage.getPath());
+            }
             mediaPlayer.prepare();
+
         } catch (IOException e) {
             e.printStackTrace();
         }
 
-        if (mediaPlayer.getDuration() < LOWER_LIMIT_RECORDING_TIME_MILLISECONDS) {
-            cancelRecording();
-        } else {
-            view.prepareForPlaying();
-        }
+//        if (mediaPlayer.getDuration() < LOWER_LIMIT_RECORDING_TIME_MILLISECONDS) {
+//            cancelRecording();
+//        } else {
+//            view.prepareForPlaying();
+//        }
 
         mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
             @Override
             public void onCompletion(MediaPlayer mp) {
                 stopPlay();
-                setLastProgress(INITIAL_PROGRESS);
+                voiceMessage.setLastProgress(INITIAL_PROGRESS);
+                voiceMessages.set(position, voiceMessage);
+                adapterView.notifyDataSetChanged();
             }
         });
     }
@@ -131,7 +157,7 @@ public class MainPresenter implements MainContract.Presenter {
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void record() {
-        Log.e("AAA" , "start recording");
+        Log.e("AAA", "start recording");
         if (mediaRecorder == null)
             initialMediaRecorder();
         view.prepareForRecording();
@@ -145,8 +171,6 @@ public class MainPresenter implements MainContract.Presenter {
             initTimer();
 
         startTimer();
-
-
     }
 
     private void startTimer() {
@@ -158,7 +182,7 @@ public class MainPresenter implements MainContract.Presenter {
                 if (timer != null) {
                     timer.start();
                 } else {
-                    //cancelRecording();
+                    cancelRecording();
                 }
             }
         }, START_TIMER_DELAY);
@@ -182,11 +206,22 @@ public class MainPresenter implements MainContract.Presenter {
         }
     }
 
+    public void getAllVoices() {
+        voiceMessages = new ArrayList<VoiceMessage>();
+        String path = Environment.getExternalStorageDirectory() + "/VoiceRecorderSimplifiedCoding/Audios";
+        File directory = new File(path);
+        File[] files = directory.listFiles();
+        for (File f : files) {
+            VoiceMessage voiceMessage = new VoiceMessage(f.getPath(), 0, 0);
+            voiceMessages.add(voiceMessage);
+        }
+    }
+
 
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void stopRecord() {
-        Log.e("AAA" , "stop recording");
+        Log.e("AAA", "stop recording");
 
         timer.cancel();
         view.prepareForStop();
@@ -196,53 +231,54 @@ public class MainPresenter implements MainContract.Presenter {
 
         mediaRecorder = null;
         timer = null;
-        initialMediaPlayer();
+        adapterView.notifyDataSetChanged();
+        //initialMediaPlayer();
     }
 
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
-    public void play() {
+    public void play(int position) {
+        setPosition(position);
+        setVoiceMessage(voiceMessages.get(position));
         if (mediaPlayer == null)
             initialMediaPlayer();
 
-        if (!isPlaying && fileName != null) {
-            isPlaying = true;
+        if (!voiceMessage.isPlaying() && voiceMessage.getPath() != null) {
             startPlay();
         } else {
-            isPlaying = false;
-            stopPlay();
+            //stopPlay();
         }
     }
 
     @Override
     public void startPlay() {
-        Log.e("AAA" , "start playing");
-
-        isPlaying = true;
+        Log.e("AAA", "start playing ");
+        voiceMessage.setPlaying(true);
         mediaPlayer.start();
-        view.startPlaying();
-        getSeekBarSubject().onNext(lastProgress);
+        adapterView.getViewHolder().startPlaying();
+        //getSeekBarSubject().onNext(lastProgress);
     }
 
     @Override
     public void stopPlay() {
-        Log.e("AAA" , "top playing");
-
-        isPlaying = false;
-
-        setLastProgress(mediaPlayer.getCurrentPosition());
-        try {
-            mediaPlayer.release();
-        } catch (Exception e) {
-            e.printStackTrace();
+        Log.e("AAA", "stop playing");
+        if (voiceMessage != null && mediaPlayer != null) {
+            voiceMessage.setPlaying(false);
+            voiceMessage.setLastProgress(mediaPlayer.getCurrentPosition());
+            try {
+                mediaPlayer.release();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            mediaPlayer = null;
+            adapterView.getViewHolder().stopPlaying();
         }
-        mediaPlayer = null;
-        view.stopPlaying();
     }
 
     @Override
     public void seek(int lastProgress) {
         mediaPlayer.seekTo(lastProgress);
+        //todo : seems change need
         isUserSeeking = false;
 
     }
@@ -255,7 +291,7 @@ public class MainPresenter implements MainContract.Presenter {
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void cancelRecording() {
-        Log.e("AAA" , "cancel recording");
+        Log.e("AAA", "cancel recording");
 
         if (mediaRecorder != null) mediaRecorder.release();
         if (timer != null) timer.cancel();
@@ -265,6 +301,16 @@ public class MainPresenter implements MainContract.Presenter {
         view.cancelRecording();
     }
 
+    @Override
+    public VoiceMessage getVoiceMessage() {
+        return voiceMessages.get(currentVoiceIndex);
+    }
+
+    @Override
+    public void setAdapterView(ChatRvAdapter chatAdapter) {
+        this.adapterView = chatAdapter;
+    }
+
 
     private String checkDigit(int number) {
         return number <= 9 ? "0" + number : String.valueOf(number);
@@ -272,11 +318,11 @@ public class MainPresenter implements MainContract.Presenter {
 
 
     public int getLastProgress() {
-        return lastProgress;
+        return voiceMessage.getLastProgress();
     }
 
     public void setLastProgress(int lastProgress) {
-        this.lastProgress = lastProgress;
+        this.voiceMessage.setLastProgress(lastProgress);
     }
 
     public int getTime() {
@@ -285,5 +331,17 @@ public class MainPresenter implements MainContract.Presenter {
 
     public void setTime(int time) {
         this.time = time;
+    }
+
+    public void setVoiceMessage(VoiceMessage voiceMessage) {
+        this.voiceMessage = voiceMessage;
+    }
+
+    public int getPosition() {
+        return position;
+    }
+
+    public void setPosition(int position) {
+        this.position = position;
     }
 }

@@ -12,9 +12,11 @@ import android.support.annotation.NonNull;
 import android.support.annotation.RequiresApi;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.transition.TransitionManager;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ImageView;
@@ -23,6 +25,8 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+
+import java.util.List;
 
 import butterknife.BindString;
 import butterknife.BindView;
@@ -42,8 +46,9 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
     String startTime;
 
     private int REQUEST_PERMISSION = 123;
-    private float positionY;
+    private float positionY,positionX;
     private MainPresenter presenter;
+    private ChatRvAdapter chatAdapter;
 
 
     @RequiresApi(api = Build.VERSION_CODES.M)
@@ -61,6 +66,7 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
         //init presenter
         presenter = new MainPresenter(this);
         presenter.requestPermission();
+        presenter.initViews();
     }
 
 
@@ -99,33 +105,7 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
     @SuppressLint("ClickableViewAccessibility")
     @Override
     public void initViews() {
-        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                if (presenter.getMediaPlayer() != null && fromUser) {
-                    presenter.isUserSeeking = true;
-                    presenter.seek(progress);
-                    presenter.setLastProgress(progress);
-                } else if (fromUser) {
-                    presenter.setLastProgress(progress);
-                }
 
-                int seconds = progress / 1000;
-                int minutes = seconds / 60;
-                seconds = seconds - (minutes * 60);
-
-                timerTv.setText(minutes + ":" + checkDigit(seconds));
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-
-            }
-        });
 
         recordButton.setOnTouchListener(new View.OnTouchListener() {
             @RequiresApi(api = Build.VERSION_CODES.KITKAT)
@@ -134,7 +114,7 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
 
                 if (event.getActionMasked() == MotionEvent.ACTION_UP) {
                     messageArea.setVisibility(View.INVISIBLE);
-                    if (event.getY() > positionY + 150) {
+                    if (event.getX() < positionX - 150) {
                         //cancel recording
                         presenter.cancelRecording();
 
@@ -148,14 +128,15 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
                 }
 
                 if (event.getAction() == MotionEvent.ACTION_MOVE) {
-                    if (event.getY() > positionY + 150) {
+                    Log.e("AAA" , "x : " + event.getX() +  "||  y: " + event.getY());
+                    if (event.getX() < positionX - 150) {
                         messageArea.setText("Cancel");
                         messageArea.setTextColor(Color.parseColor("#FF2196F3"));
                     } else if (event.getY() < positionY - 150) {
                         messageArea.setText("Lock");
                         messageArea.setTextColor(Color.parseColor("#FFCC1F1F"));
                     } else {
-                        messageArea.setText("Recording");
+                        //messageArea.setText("Recording");
                         messageArea.setTextColor(Color.parseColor("#FFA8A8A8"));
                     }
                     return true;
@@ -164,6 +145,7 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
                 if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
                     messageArea.setVisibility(View.VISIBLE);
                     positionY = event.getY();
+                    positionX = event.getX();
                     presenter.record();
                     return true;
                 }
@@ -173,58 +155,60 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
     }
 
 
-    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
-    @OnClick(R.id.image_view_stop)
-    public void onStopClick() {
-        presenter.stopRecord();
-    }
-
-    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
-    @OnClick(R.id.image_view_play)
-    public void onPlayClick() {
-        presenter.play();
-    }
+//    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+//    @OnClick(R.id.image_view_stop)
+//    public void onStopClick() {
+//        presenter.stopRecord();
+//    }
+//
+//    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+//    @OnClick(R.id.image_view_play)
+//    public void onPlayClick() {
+//        presenter.play();
+//    }
 
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void prepareForRecording() {
-        TransitionManager.beginDelayedTransition(recorderLl);
-        recordIv.setVisibility(View.GONE);
-        stopIv.setVisibility(View.VISIBLE);
-        playLl.setVisibility(View.GONE);
+//        TransitionManager.beginDelayedTransition(recorderLl);
+//        recordIv.setVisibility(View.GONE);
+//        stopIv.setVisibility(View.VISIBLE);
+//        playLl.setVisibility(View.GONE);
+        messageArea.setText(startTime);
     }
 
     @Override
     public void prepareForPlaying() {
-        seekBar.setProgress(presenter.getLastProgress());
-        presenter.seek(presenter.getLastProgress());
-        seekBar.setMax(presenter.getMediaPlayerDuration());
+//        seekBar.setProgress(presenter.getLastProgress());
+//        presenter.seek(presenter.getLastProgress());
+//        seekBar.setMax(pr     esenter.getMediaPlayerDuration());
     }
 
     @Override
     public void startRecording() {
-        presenter.setLastProgress(0);
-        seekBar.setProgress(0);
+//        presenter.setLastProgress(0);
+//        seekBar.setProgress(0);
+//        presenter.setTime(0);
         presenter.setTime(0);
     }
 
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void prepareForStop() {
-        TransitionManager.beginDelayedTransition(recorderLl);
-        recordButton.setVisibility(View.VISIBLE);
-        stopIv.setVisibility(View.GONE);
-        playLl.setVisibility(View.VISIBLE);
+//        TransitionManager.beginDelayedTransition(recorderLl);
+//        recordButton.setVisibility(View.VISIBLE);
+//        stopIv.setVisibility(View.GONE);
+//        playLl.setVisibility(View.VISIBLE);
     }
 
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void prepareForCancel() {
-        TransitionManager.beginDelayedTransition(recorderLl);
-        recordButton.setVisibility(View.VISIBLE);
-        stopIv.setVisibility(View.GONE);
-        playLl.setVisibility(View.GONE);
-        timerTv.setText(startTime);
+//        TransitionManager.beginDelayedTransition(recorderLl);
+//        recordButton.setVisibility(View.VISIBLE);
+//        stopIv.setVisibility(View.GONE);
+//        playLl.setVisibility(View.GONE);
+//        timerTv.setText(startTime);
     }
 
     private String checkDigit(int number) {
@@ -233,20 +217,22 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
 
     @Override
     public void startPlaying() {
-        playIv.setImageResource(R.drawable.ic_pause);
-        seekBar.setProgress(presenter.getLastProgress());
-        presenter.seek(presenter.getLastProgress());
-        seekBar.setMax(presenter.getMediaPlayerDuration());
+//        playIv.setImageResource(R.drawable.ic_pause);
+//        seekBar.setProgress(presenter.getLastProgress());
+//        presenter.seek(presenter.getLastProgress());
+//        seekBar.setMax(presenter.getMediaPlayerDuration());
     }
 
     @Override
     public void stopPlaying() {
-        playIv.setImageResource(R.drawable.ic_play);
+
+//        playIv.setImageResource(R.drawable.ic_play);
     }
 
     @Override
     public void setSeekBarProgress(int currentPosition) {
-        seekBar.setProgress(currentPosition);
+
+//        seekBar.setProgress(currentPosition);
     }
 
     @Override
@@ -255,8 +241,16 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
     }
 
     @Override
+    public void initRecyclerView(List<VoiceMessage> voiceMessages) {
+        chatAdapter = new ChatRvAdapter(this, voiceMessages, presenter);
+        messagesRv.setAdapter(chatAdapter);
+        messagesRv.setLayoutManager(new LinearLayoutManager(this));
+        presenter.setAdapterView(chatAdapter);
+    }
+
+    @Override
     public void setTimerTv(String time) {
-        timerTv.setText(time);
+        messageArea.setText(time);
     }
 
 }
