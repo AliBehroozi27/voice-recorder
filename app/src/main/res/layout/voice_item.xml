@@ -4,13 +4,13 @@
     android:id="@+id/cardView"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:gravity="right"
     android:layout_margin="2dp"
     android:layout_marginStart="?android:attr/actionBarSize"
     android:layout_marginLeft="?android:attr/actionBarSize"
-    android:background="#2196F3">
+    android:background="@drawable/voice_chat">
 
     <LinearLayout
+        android:id="@+id/line1"
         android:layout_width="200dp"
         android:layout_height="wrap_content"
         android:layout_gravity="start|center_vertical">
@@ -58,6 +58,7 @@
                 android:progressTint="#FFFFFF"
                 android:thumbTint="#FFFFFF" />
 
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -90,9 +91,20 @@
 
 
             </LinearLayout>
+
+
         </LinearLayout>
 
+        <ImageView
+            android:id="@+id/delete"
+            android:layout_gravity="center"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:background="@drawable/ic_delete" />
+
     </LinearLayout>
+
+
 
 </RelativeLayout>
 

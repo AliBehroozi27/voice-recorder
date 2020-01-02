@@ -10,7 +10,6 @@ import android.util.Log;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -40,14 +39,13 @@ public class MainPresenter implements MainContract.Presenter {
     private boolean isRecording;
     private CountDownTimer timer;
     private int time;
-    private List<VoiceMessage> voiceMessages;
+    private List<VoiceMessage> voiceMessages = new ArrayList<VoiceMessage>();;
     private VoiceMessage voiceMessage;
 
     @RequiresApi(api = Build.VERSION_CODES.M)
     public MainPresenter(MainActivity view) {
         this.view = view;
-        getAllVoices();
-
+        voiceMessages = getAllVoices();
     }
 
     @Override
@@ -144,16 +142,9 @@ public class MainPresenter implements MainContract.Presenter {
             @Override
             public void onCompletion(MediaPlayer mp) {
                 stopPlay();
-//                voiceMessage.setLastProgress(INITIAL_PROGRESS);
-//                voiceMessages.set(position, voiceMessage);
-//                for (VoiceMessage v :
-//                        voiceMessages) {
-//                    Log.e("BBB" , v.getLastProgress() + "  " + v.getDuration() + "  " + position);
-//                    Log.e("BBB" , v + "");
-//
-//                }
-//                adapterView.notifyDataSetChanged();
-
+                voiceMessage.setLastProgress(INITIAL_PROGRESS);
+                voiceMessages.set(position, voiceMessage);
+                adapterView.notifyDataSetChanged();
             }
         });
     }
@@ -195,13 +186,14 @@ public class MainPresenter implements MainContract.Presenter {
     @Override
     public void initTimer() {
         if (timer == null) {
-            timer = new CountDownTimer(UPPER_LIMIT_RECORDING_TIME_MILLISECONDS, 1000) {
+            timer = new CountDownTimer(UPPER_LIMIT_RECORDING_TIME_MILLISECONDS, 63) {
                 public void onTick(long millisUntilFinished) {
-                    int seconds = time;
+                    int milliseconds = time;
+                    int seconds = time / 1000;
                     int minutes = seconds / 60;
                     seconds = seconds - (minutes * 60);
-                    view.setTimerTv(minutes + ":" + checkDigit(seconds));
-                    time++;
+                    view.setTimerTv(minutes + ":" + checkSecondsDigit(seconds) + ":" + checkMilliSecondsDigit(milliseconds));
+                    time += 63;
                 }
 
                 public void onFinish() {
@@ -210,8 +202,7 @@ public class MainPresenter implements MainContract.Presenter {
         }
     }
 
-    public void getAllVoices() {
-        voiceMessages = new ArrayList<VoiceMessage>();
+    private List<VoiceMessage> getAllVoices() {
         String path = Environment.getExternalStorageDirectory() + "/VoiceRecorderSimplifiedCoding/Audios";
         File directory = new File(path);
         File[] files = directory.listFiles();
@@ -219,6 +210,7 @@ public class MainPresenter implements MainContract.Presenter {
             VoiceMessage voiceMessage = new VoiceMessage(f.getPath(), 0, 0);
             voiceMessages.add(voiceMessage);
         }
+        return voiceMessages;
     }
 
 
@@ -235,6 +227,7 @@ public class MainPresenter implements MainContract.Presenter {
 
         mediaRecorder = null;
         timer = null;
+        voiceMessages.add(new VoiceMessage(fileName , 0 ,0));
         adapterView.notifyDataSetChanged();
     }
 
@@ -313,8 +306,12 @@ public class MainPresenter implements MainContract.Presenter {
     }
 
 
-    private String checkDigit(int number) {
+    private String checkSecondsDigit(int number) {
         return number <= 9 ? "0" + number : String.valueOf(number);
+    }
+
+    private String checkMilliSecondsDigit(int number) {
+        return number <= 9 ? "00" + number : number <= 99 ? "0" + number : String.valueOf(number%1000) ;
     }
 
 

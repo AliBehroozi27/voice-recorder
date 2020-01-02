@@ -4,34 +4,40 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/white"
     tools:context=".MainActivity">
 
+
     <ScrollView
-        android:id="@+id/scrollView"
         android:layout_width="match_parent"
-        android:paddingTop="2dp"
-        android:layout_height="0dp"
-        android:layout_weight="20"
-        app:layout_constraintBottom_toTopOf="@+id/seperator"
-        app:layout_constraintTop_toTopOf="parent">
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        android:layout_marginBottom="35dp"
+        app:layout_constraintBottom_toTopOf="@+id/include">
 
         <android.support.v7.widget.RecyclerView
-            android:layout_gravity="right"
-            tools:itemCount="50"
             android:id="@+id/recycler_view"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_gravity="right"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:itemCount="15"
             tools:listitem="@layout/voice_item" />
     </ScrollView>
 
-
-    <View
-        android:id="@+id/seperator"
+    <TextView
+        android:id="@+id/state"
         android:layout_width="match_parent"
-        android:layout_height="2dp"
-        android:background="#C9C3C3"
-        app:layout_constraintBottom_toTopOf="@+id/include" />
+        android:layout_height="wrap_content"
+        android:layout_gravity="right"
+        android:paddingStart="10dp"
+        android:paddingLeft="10dp"
+        android:textAlignment="textEnd"
+        android:textColor="#CFD8DC"
+        android:textColorHint="#CFD8DC"
+        android:textSize="20sp"
+        app:layout_constraintBottom_toTopOf="@+id/seperator"
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:ignore="RtlCompat" />
 
     <include
         android:id="@+id/include"
@@ -40,6 +46,8 @@
         android:layout_height="wrap_content"
         android:gravity="bottom"
         app:layout_constraintBottom_toBottomOf="parent" />
-
-
 </android.support.constraint.ConstraintLayout>
+
+
+
+

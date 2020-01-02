@@ -18,8 +18,13 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import java.io.File;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 import butterknife.BindDrawable;
 import butterknife.BindView;
@@ -71,37 +76,47 @@ public class ChatRvAdapter extends RecyclerView.Adapter<ChatRvAdapter.ViewHolder
         VoiceMessage voiceMessage = voiceMessages.get(position);
         Log.e("AAAAA on Bind ", voiceMessage.getString());
 
+        File file = new File(voiceMessage.getPath());
+        Date modifiedTime = new Date(file.lastModified());
+        SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+
         MediaMetadataRetriever mmr = new MediaMetadataRetriever();
         mmr.setDataSource(context, Uri.parse(voiceMessage.getPath()));
-        calculateTime(Integer.parseInt(mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)), holder);
         holder.seekBar.setMax(Integer.parseInt(mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)));
         holder.seekBar.setProgress(voiceMessage.getLastProgress());
+        holder.dateModified.setText(sdf.format(modifiedTime.getTime()));
 
         if (voiceMessage.isPlaying()) {
             holder.playButton.setImageResource(R.drawable.ic_pause);
             holder.seekUpdation(holder);
         } else {
             holder.playButton.setImageResource(R.drawable.ic_play);
+            voiceMessage.setLastProgress(0);
+            holder.seekBar.setProgress(voiceMessage.getLastProgress());
+            calculateTime(Integer.parseInt(mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)), holder);
         }
+
+
 
         Log.e("AAAAA", "--------------- end binding :: " + position);
 
         holder.seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                calculateTime(progress, holder);
                 if (presenter.getMediaPlayer() != null && presenter.getVoiceMessage().getPath().equals(voiceMessage.getPath()) && fromUser) {
                     presenter.isUserSeeking = true;
                     presenter.seek(progress);
-                    presenter.setLastProgress(progress);
                     voiceMessage.setLastProgress(progress);
-                    calculateTime(progress, holder);
-
+                    Log.e("AAAaaa" , "changing time");
                 } else if (position == presenter.getPosition()) {
                     voiceMessage.setLastProgress(progress);
-                    presenter.setLastProgress(progress);
+                    Log.e("aaa onProgressChange", "pos : " + position + voiceMessage.getString());
+                } else if (fromUser) {
                     voiceMessage.setLastProgress(progress);
                     Log.e("aaa onProgressChange", "pos : " + position + voiceMessage.getString());
                 }
+
 
             }
 
@@ -120,7 +135,6 @@ public class ChatRvAdapter extends RecyclerView.Adapter<ChatRvAdapter.ViewHolder
         int seconds = duration / 1000;
         int minutes = seconds / 60;
         seconds = seconds - (minutes * 60);
-
         holder.timer.setText(minutes + ":" + checkDigit(seconds));
     }
 
@@ -144,6 +158,8 @@ public class ChatRvAdapter extends RecyclerView.Adapter<ChatRvAdapter.ViewHolder
         TextView dateModified;
         @BindView(R.id.timer)
         TextView timer;
+        @BindView(R.id.delete)
+        ImageView deleteIcon;
 
         private int position;
         private ViewHolder holder;
@@ -158,6 +174,26 @@ public class ChatRvAdapter extends RecyclerView.Adapter<ChatRvAdapter.ViewHolder
         }
 
         private void bindEvents() {
+            deleteIcon.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    int deletingVoicePosition = getAdapterPosition();
+                    File file = new File(voiceMessages.get(deletingVoicePosition).getPath());
+                    if (file.exists()) {
+                        if (file.delete()) {
+                            Toast.makeText(context , "voice " + deletingVoicePosition +" deleted", Toast.LENGTH_LONG).show();
+                            voiceMessages.remove(deletingVoicePosition);
+                            notifyDataSetChanged();
+                        } else {
+                            Toast.makeText(context , "deletion failed", Toast.LENGTH_LONG).show();
+                        }
+                    }
+                }});
+
+
+
+
+
             playButton.setOnClickListener(new View.OnClickListener() {
                 @RequiresApi(api = Build.VERSION_CODES.KITKAT)
                 @Override
@@ -222,9 +258,6 @@ public class ChatRvAdapter extends RecyclerView.Adapter<ChatRvAdapter.ViewHolder
         };
 
 
-
-
-
         private void seekUpdation(ViewHolder holder) {
             this.holder = holder;
             if (presenter.getMediaPlayer() != null) {
@@ -235,7 +268,7 @@ public class ChatRvAdapter extends RecyclerView.Adapter<ChatRvAdapter.ViewHolder
                 presenter.getVoiceMessage().setLastProgress(mCurrentPosition);
 
             }
-            mHandler.postDelayed(runnable, 100);
+            mHandler.postDelayed(runnable, 5);
         }
 
         @Override
