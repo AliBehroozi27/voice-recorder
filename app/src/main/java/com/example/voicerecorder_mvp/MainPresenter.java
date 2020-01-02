@@ -35,16 +35,13 @@ public class MainPresenter implements MainContract.Presenter {
     private OpusRecorder mediaRecorder;
     private String fileName;
     private int position;
-    private boolean isPlaying;
     private MediaPlayer mediaPlayer;
-    private int lastProgress = 0;
     private BehaviorSubject<Integer> seekBarSubject;
     private boolean isRecording;
     private CountDownTimer timer;
     private int time;
     private List<VoiceMessage> voiceMessages;
     private VoiceMessage voiceMessage;
-    private int currentVoiceIndex = 1;
 
     @RequiresApi(api = Build.VERSION_CODES.M)
     public MainPresenter(MainActivity view) {
@@ -147,9 +144,16 @@ public class MainPresenter implements MainContract.Presenter {
             @Override
             public void onCompletion(MediaPlayer mp) {
                 stopPlay();
-                voiceMessage.setLastProgress(INITIAL_PROGRESS);
-                voiceMessages.set(position, voiceMessage);
-                adapterView.notifyDataSetChanged();
+//                voiceMessage.setLastProgress(INITIAL_PROGRESS);
+//                voiceMessages.set(position, voiceMessage);
+//                for (VoiceMessage v :
+//                        voiceMessages) {
+//                    Log.e("BBB" , v.getLastProgress() + "  " + v.getDuration() + "  " + position);
+//                    Log.e("BBB" , v + "");
+//
+//                }
+//                adapterView.notifyDataSetChanged();
+
             }
         });
     }
@@ -232,7 +236,6 @@ public class MainPresenter implements MainContract.Presenter {
         mediaRecorder = null;
         timer = null;
         adapterView.notifyDataSetChanged();
-        //initialMediaPlayer();
     }
 
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
@@ -276,11 +279,9 @@ public class MainPresenter implements MainContract.Presenter {
     }
 
     @Override
-    public void seek(int lastProgress) {
-        mediaPlayer.seekTo(lastProgress);
-        //todo : seems change need
+    public void seek(int progress) {
+        mediaPlayer.seekTo(progress);
         isUserSeeking = false;
-
     }
 
     @Override
@@ -303,7 +304,7 @@ public class MainPresenter implements MainContract.Presenter {
 
     @Override
     public VoiceMessage getVoiceMessage() {
-        return voiceMessages.get(currentVoiceIndex);
+        return voiceMessages.get(position);
     }
 
     @Override

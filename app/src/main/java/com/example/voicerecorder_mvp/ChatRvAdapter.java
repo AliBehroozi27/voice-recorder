@@ -64,49 +64,44 @@ public class ChatRvAdapter extends RecyclerView.Adapter<ChatRvAdapter.ViewHolder
     }
 
 
-
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void onBindViewHolder(@NonNull ChatRvAdapter.ViewHolder holder, int position) {
+        Log.e("AAAAA", "--------------- start binding :: " + position);
         VoiceMessage voiceMessage = voiceMessages.get(position);
+        Log.e("AAAAA on Bind ", voiceMessage.getString());
 
         MediaMetadataRetriever mmr = new MediaMetadataRetriever();
         mmr.setDataSource(context, Uri.parse(voiceMessage.getPath()));
-
         calculateTime(Integer.parseInt(mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)), holder);
         holder.seekBar.setMax(Integer.parseInt(mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)));
-        //holder.seekBar.setProgress(voiceMessage.getLastProgress());
-        //holder.dateModified.setText(voiceMessage.getDateModified());
-
-        //Log.e("AAA", "voice " + position + "  " + voiceMessage.isPlaying());
+        holder.seekBar.setProgress(voiceMessage.getLastProgress());
 
         if (voiceMessage.isPlaying()) {
             holder.playButton.setImageResource(R.drawable.ic_pause);
-            TransitionManager.beginDelayedTransition((ViewGroup) holder.itemView);
-            Log.e("AAA", "holderrr "  + holder);
             holder.seekUpdation(holder);
         } else {
             holder.playButton.setImageResource(R.drawable.ic_play);
-            TransitionManager.beginDelayedTransition((ViewGroup) holder.itemView);
         }
-//        Log.e("AAA" ,"current positon : " + holder.getOldPosition());
-//        if (presenter.getMediaPlayer() != null && holder.getPosition()== presenter.getPosition())
 
-        //holder.seekBar.setProgress(voiceMessage.getLastProgress());
+        Log.e("AAAAA", "--------------- end binding :: " + position);
 
         holder.seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                if (presenter.getMediaPlayer() != null && presenter.getVoiceMessage().getPath() == voiceMessage.getPath() && fromUser) {
+                if (presenter.getMediaPlayer() != null && presenter.getVoiceMessage().getPath().equals(voiceMessage.getPath()) && fromUser) {
                     presenter.isUserSeeking = true;
-                    //presenter.seek(progress);
+                    presenter.seek(progress);
                     presenter.setLastProgress(progress);
+                    voiceMessage.setLastProgress(progress);
                     calculateTime(progress, holder);
 
-                } else if (fromUser) {
+                } else if (position == presenter.getPosition()) {
                     voiceMessage.setLastProgress(progress);
+                    presenter.setLastProgress(progress);
+                    voiceMessage.setLastProgress(progress);
+                    Log.e("aaa onProgressChange", "pos : " + position + voiceMessage.getString());
                 }
-
 
             }
 
@@ -150,11 +145,9 @@ public class ChatRvAdapter extends RecyclerView.Adapter<ChatRvAdapter.ViewHolder
         @BindView(R.id.timer)
         TextView timer;
 
-        private String voiceMessagePath;
         private int position;
         private ViewHolder holder;
         private Handler mHandler = new Handler();
-        //private Runnable runnable;
 
 
         ViewHolder(View itemView) {
@@ -172,24 +165,26 @@ public class ChatRvAdapter extends RecyclerView.Adapter<ChatRvAdapter.ViewHolder
                     position = getAdapterPosition();
                     VoiceMessage voiceMessage = voiceMessages.get(position);
 
-                    voiceMessagePath = voiceMessage.getPath();
-                    Log.e("aaa", last_index + " " + position + " " + voiceMessage.isPlaying());
+                    Log.e("AAAA onClick", last_index + " " + position + " " + voiceMessage.getString());
 
                     if (voiceMessage.isPlaying()) {
                         //presenter.stopPlay();
                         if (position == last_index) {
                             voiceMessage.setPlaying(false);
+                            voiceMessages.set(position, voiceMessage);
                             presenter.stopPlay();
-                            //Log.e("AAA", "STOP CURRENT " + position);
-                            notifyItemChanged(position);
+                            Log.e("AAAA", "STOP CURRENT " + position + "  " + voiceMessage.getString());
+                            //notifyItemChanged(position);
+                            notifyDataSetChanged();
                         } else {
                             markAllPaused();
                             presenter.stopPlay();
                             presenter.play(position);
                             voiceMessage.setPlaying(true);
-                            notifyItemChanged(position);
-                            notifyItemChanged(last_index);
-                            //Log.e("AAA", "PLAY NEW " + position + "  dur : " + presenter.getMediaPlayer().getDuration());
+                            //notifyItemChanged(position);
+                            notifyDataSetChanged();
+
+                            Log.e("AAAA", "PLAY NEW " + position + "  " + voiceMessage.getString());
                             last_index = position;
                         }
 
@@ -198,17 +193,19 @@ public class ChatRvAdapter extends RecyclerView.Adapter<ChatRvAdapter.ViewHolder
                             markAllPaused();
                             presenter.play(position);
                             voiceMessage.setPlaying(true);
-                            //Log.e("AAA", "PLAY CURRENT " + position);
-                            notifyItemChanged(position);
+                            Log.e("AAAA", "PLAY CURRENT " + position + "  " + voiceMessage.getString());
+                            //notifyItemChanged(position);
+                            notifyDataSetChanged();
+
                             last_index = position;
                         } else {
                             markAllPaused();
                             presenter.stopPlay();
                             presenter.play(position);
                             voiceMessage.setPlaying(true);
-                            notifyItemChanged(position);
-                            notifyItemChanged(last_index);
-                            //Log.e("AAA", "PLAY NEW " + position + "  dur : " + presenter.getMediaPlayer().getDuration());
+                            //notifyItemChanged(position);
+                            notifyDataSetChanged();
+                            Log.e("AAAA", "PLAY NEW " + position + "  " + voiceMessage.getString());
                             last_index = position;
                         }
 
@@ -220,19 +217,23 @@ public class ChatRvAdapter extends RecyclerView.Adapter<ChatRvAdapter.ViewHolder
         Runnable runnable = new Runnable() {
             @Override
             public void run() {
-                viewHolder.seekUpdation(viewHolder);
+                viewHolder.seekUpdation(holder);
             }
         };
 
 
+
+
+
         private void seekUpdation(ViewHolder holder) {
             this.holder = holder;
-            Log.e("AAAA" , "holder  " + holder);
             if (presenter.getMediaPlayer() != null) {
                 int mCurrentPosition = presenter.getMediaPlayer().getCurrentPosition();
-                holder.seekBar.setMax(presenter.getMediaPlayer().getDuration());
-                holder.seekBar.setProgress(mCurrentPosition);
+                this.holder.seekBar.setMax(presenter.getMediaPlayer().getDuration());
+                this.holder.seekBar.setProgress(mCurrentPosition);
+                Log.e("AA update", presenter.getVoiceMessage().getString());
                 presenter.getVoiceMessage().setLastProgress(mCurrentPosition);
+
             }
             mHandler.postDelayed(runnable, 100);
         }
@@ -252,15 +253,14 @@ public class ChatRvAdapter extends RecyclerView.Adapter<ChatRvAdapter.ViewHolder
         @Override
         public void setSeekBarProgress(Integer progress) {
             seekBar.setProgress(progress);
-            Log.e("AAA", "adapter progress : " + progress);
+            Log.e("AAA set seek bar", "adapter progress : " + progress);
             //notifyItemChanged(position);
         }
 
 
-
         @Override
         public void stopPlaying() {
-
+            mHandler.removeCallbacks(runnable);
         }
 
     }

@@ -13,7 +13,6 @@ public interface MainContract {
         void setSeekBarProgress(Integer integer);
 
         void stopPlaying();
-
     }
 
 

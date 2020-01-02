@@ -63,4 +63,8 @@ public class VoiceMessage {
     public void setDateModified(int dateModified) {
         this.dateModified = dateModified;
     }
+
+    public String getString(){
+        return "  duration : " + duration + " | lastprogress : " + lastProgress + " | isPlaying :" + isPlaying;
+    }
 }
