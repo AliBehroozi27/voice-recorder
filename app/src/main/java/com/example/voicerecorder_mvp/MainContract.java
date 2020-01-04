@@ -10,8 +10,6 @@ public interface MainContract {
     interface Adapter {
         void startPlaying();
 
-        void setSeekBarProgress(Integer integer);
-
         void stopPlaying();
     }
 
@@ -25,19 +23,7 @@ public interface MainContract {
 
         void prepareForRecording();
 
-        void prepareForPlaying();
-
         void startRecording();
-
-        void prepareForStop();
-
-        void startPlaying();
-
-        void stopPlaying();
-
-        void prepareForCancel();
-
-        void setSeekBarProgress(int currentPosition);
 
         void cancelRecording();
 
@@ -50,19 +36,20 @@ public interface MainContract {
 
         void requestPermission();
 
-        void record() throws IOException;
+        void startRecord() throws IOException;
 
         void initialMediaRecorder();
 
         void initialMediaPlayer();
 
-        BehaviorSubject<Integer> getSeekBarSubject();
-
         void stopRecord();
 
-        void play(int position);
 
-        void startPlay();
+        String checkSecondsDigit(int number);
+
+        String checkMilliSecondsDigit(int number);
+
+        void startPlay(int position);
 
         void stopPlay();
 
@@ -70,12 +57,15 @@ public interface MainContract {
 
         void seek(int lastProgress);
 
-        int getMediaPlayerDuration();
-
         void cancelRecording();
 
         VoiceMessage getVoiceMessage();
 
         void setAdapterView(ChatRvAdapter chatAdapter);
+
+        void deleteVoice(int deletingVoicePosition);
+
+        void deleteVoice(String path);
+
     }
 }

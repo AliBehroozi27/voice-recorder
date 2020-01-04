@@ -12,7 +12,6 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ImageView;
@@ -123,13 +122,14 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
                         //doing nothing to lock recording
                     } else {
                         //usual case
-                        presenter.stopRecord();
+                        if (presenter.isRecording())
+                            presenter.stopRecord();
                     }
                     return true;
                 }
 
                 if (event.getAction() == MotionEvent.ACTION_MOVE) {
-                    Log.e("AAA" , "x : " + event.getX() +  "||  y: " + event.getY());
+                    //Log.e("AAA" , "x : " + event.getX() +  "||  y: " + event.getY());
                     if (event.getX() < positionX - 150) {
                         recordingState.setText(STATE_CANCEL);
                         recordingState.setTextColor(Color.parseColor("#FF2196F3"));
@@ -148,15 +148,17 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
                     recordingState.setVisibility(View.VISIBLE);
                     positionY = event.getY();
                     positionX = event.getX();
-                    presenter.record();
+                    if (presenter.isRecording()) {
+                        presenter.stopRecord();
+                    } else {
+                        presenter.startRecord();
+                    }
                     return true;
                 }
                 return false;
             }
         });
     }
-
-
 
 
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
@@ -166,39 +168,10 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
     }
 
     @Override
-    public void prepareForPlaying() {
-    }
-
-    @Override
     public void startRecording() {
         presenter.setTime(0);
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
-    @Override
-    public void prepareForStop() {
-    }
-
-    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
-    @Override
-    public void prepareForCancel() {
-    }
-
-    private String checkDigit(int number) {
-        return number <= 9 ? "0" + number : String.valueOf(number);
-    }
-
-    @Override
-    public void startPlaying() {
-    }
-
-    @Override
-    public void stopPlaying() {
-    }
-
-    @Override
-    public void setSeekBarProgress(int currentPosition) {
-    }
 
     @Override
     public void cancelRecording() {
