@@ -12,11 +12,13 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+
 
 import java.util.List;
 
@@ -24,17 +26,13 @@ import butterknife.BindString;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 
-public class MainActivity extends AppCompatActivity implements MainContract.View {
+public class MainActivity extends AppCompatActivity implements MainContract.View , AudioRecordView.RecordingListener {
 
 
     @BindView(R.id.recycler_view)
     RecyclerView messagesRv;
-    @BindView(R.id.message_area)
-    TextView messageArea;
-    @BindView(R.id.state)
-    TextView recordingState;
-    @BindView(R.id.record_button)
-    ImageView recordButton;
+    @BindView(R.id.recordingView)
+    AudioRecordView audioRecordView;
     @BindString(R.string.start_time)
     String START_TIME;
     @BindString(R.string.state_recording)
@@ -106,56 +104,19 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
     @SuppressLint("ClickableViewAccessibility")
     @Override
     public void initViews() {
-        recordButton.setOnTouchListener(new View.OnTouchListener() {
-            @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+        audioRecordView.setRecordingListener(this);
+
+        audioRecordView.getAttachmentView().setOnClickListener(new View.OnClickListener() {
             @Override
-            public boolean onTouch(View v, MotionEvent event) {
+            public void onClick(View v) {
+            }
+        });
 
-                if (event.getActionMasked() == MotionEvent.ACTION_UP) {
-                    recordingState.setVisibility(View.INVISIBLE);
-                    messageArea.setText(RECORD_MESSAGE);
-                    if (event.getX() < positionX - 150) {
-                        //cancel recording
-                        presenter.cancelRecording();
-
-                    } else if (event.getY() < positionY - 150) {
-                        //doing nothing to lock recording
-                    } else {
-                        //usual case
-                        if (presenter.isRecording())
-                            presenter.stopRecord();
-                    }
-                    return true;
-                }
-
-                if (event.getAction() == MotionEvent.ACTION_MOVE) {
-                    //Log.e("AAA" , "x : " + event.getX() +  "||  y: " + event.getY());
-                    if (event.getX() < positionX - 150) {
-                        recordingState.setText(STATE_CANCEL);
-                        recordingState.setTextColor(Color.parseColor("#FF2196F3"));
-                    } else if (event.getY() < positionY - 150) {
-                        recordingState.setText(STATE_LOCK);
-                        recordingState.setTextColor(Color.parseColor("#12B318"));
-                    } else {
-                        messageArea.setTextColor(Color.parseColor("#FFA8A8A8"));
-                        recordingState.setTextColor(Color.parseColor("#FFCC1F1F"));
-                        recordingState.setText(STATE_RECORDING);
-                    }
-                    return true;
-                }
-
-                if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
-                    recordingState.setVisibility(View.VISIBLE);
-                    positionY = event.getY();
-                    positionX = event.getX();
-                    if (presenter.isRecording()) {
-                        presenter.stopRecord();
-                    } else {
-                        presenter.startRecord();
-                    }
-                    return true;
-                }
-                return false;
+        audioRecordView.getSendView().setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String msg = audioRecordView.getMessageView().getText().toString();
+                audioRecordView.getMessageView().setText("");
             }
         });
     }
@@ -164,7 +125,7 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void prepareForRecording() {
-        messageArea.setText(START_TIME);
+       // messageArea.setText(START_TIME);
     }
 
     @Override
@@ -188,7 +149,29 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
 
     @Override
     public void setTimerTv(String time) {
-        messageArea.setText(time);
+        //messageArea.setText(time);
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+    @Override
+    public void onRecordingStarted() {
+        presenter.startRecord();
+    }
+
+    @Override
+    public void onRecordingLocked() {
+
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+    @Override
+    public void onRecordingCompleted() {
+        presenter.stopRecord();
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+    @Override
+    public void onRecordingCanceled() {
+        presenter.cancelRecording();
+    }
 }

@@ -11,8 +11,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:fillViewport="true"
-        android:layout_marginBottom="35dp"
-        app:layout_constraintBottom_toTopOf="@+id/include">
+        android:layout_marginBottom="35dp">
 
         <android.support.v7.widget.RecyclerView
             android:id="@+id/recycler_view"
@@ -24,28 +23,14 @@
             tools:listitem="@layout/voice_item" />
     </ScrollView>
 
-    <TextView
-        android:id="@+id/state"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="right"
-        android:paddingStart="10dp"
-        android:paddingLeft="10dp"
-        android:textAlignment="textEnd"
-        android:textColor="#CFD8DC"
-        android:textColorHint="#CFD8DC"
-        android:textSize="20sp"
-        app:layout_constraintBottom_toTopOf="@+id/seperator"
-        app:layout_constraintEnd_toEndOf="parent"
-        tools:ignore="RtlCompat" />
 
-    <include
-        android:id="@+id/include"
-        layout="@layout/message"
+    <com.example.voicerecorder_mvp.AudioRecordView
+        android:id="@+id/recordingView"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="bottom"
-        app:layout_constraintBottom_toBottomOf="parent" />
+        android:layout_height="match_parent"
+        android:layout_gravity="bottom" />
+
+
 </android.support.constraint.ConstraintLayout>
 
 

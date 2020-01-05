@@ -5,4 +5,5 @@
     <string name="state_cancel" >Cancel</string>
     <string name="state_lock" >Lock</string>
     <string name="record_message">record a voice</string>
+    <string name="slide_to_cancel">slide to cancel</string>
 </resources>
