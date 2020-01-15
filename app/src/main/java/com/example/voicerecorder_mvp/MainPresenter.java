@@ -6,6 +6,7 @@ import android.os.CountDownTimer;
 import android.os.Environment;
 import android.os.Handler;
 import android.support.annotation.RequiresApi;
+import android.util.Log;
 
 import java.io.File;
 import java.io.IOException;
@@ -27,7 +28,7 @@ public class MainPresenter implements MainContract.Presenter {
     boolean isUserSeeking = false;
     private MainActivity view;
     private ChatRvAdapter adapterView;
-    private OpusRecorder mediaRecorder;
+    private MyOpusRecorder mediaRecorder;
     private String fileName;
     private int position;
     private MediaPlayer mediaPlayer;
@@ -64,16 +65,17 @@ public class MainPresenter implements MainContract.Presenter {
     @Override
     public void initialMediaRecorder() {
         initialFileName();
-        mediaRecorder = OpusRecorder.getInstance();
+        mediaRecorder = MyOpusRecorder.getInstance();
     }
 
     private void initialFileName() {
         File root = Environment.getExternalStorageDirectory();
-        File file = new File(root.getAbsolutePath() + SAVING_PATH);
+        Log.e("BBBBb" , Environment.getExternalStorageDirectory() + SAVING_PATH);
+        File file = new File(Environment.getExternalStorageDirectory()+ SAVING_PATH);
         if (!file.exists()) {
             file.mkdirs();
         }
-        fileName = root.getAbsolutePath() + SAVING_PATH + System.currentTimeMillis() + VOICE_FORMAT;
+        fileName = Environment.getExternalStorageDirectory()+ SAVING_PATH + "/" + System.currentTimeMillis() + VOICE_FORMAT;
     }
 
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
@@ -142,6 +144,7 @@ public class MainPresenter implements MainContract.Presenter {
                     int seconds = time / 1000;
                     int minutes = seconds / 60;
                     seconds = seconds - (minutes * 60);
+                    Log.e("bbbb",mediaRecorder.getPressure() + "");
                     view.setTimerTv(minutes + ":" + checkSecondsDigit(seconds) + ":" + checkMilliSecondsDigit(milliseconds));
                     time += randomInterval;
                 }
@@ -153,8 +156,13 @@ public class MainPresenter implements MainContract.Presenter {
     }
 
     private List<VoiceMessage> getAllVoices() {
-        String path = Environment.getExternalStorageDirectory() + "/" + SAVING_PATH;
+        File file = new File(Environment.getExternalStorageDirectory() + SAVING_PATH);
+        if (!file.exists()) {
+            file.mkdirs();
+        }
+        String path = Environment.getExternalStorageDirectory() + "/" +SAVING_PATH;
         File directory = new File(path);
+        Log.e("BBBB" , directory.getAbsolutePath());
         File[] files = directory.listFiles();
         for (File f : files) {
             VoiceMessage voiceMessage = new VoiceMessage(f.getPath(), 0, 0);
