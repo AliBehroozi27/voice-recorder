@@ -1,8 +1,10 @@
-package com.example.voicerecorder_mvp;
+package com.example.voicerecorder_mvp.utils;
 
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
+import android.os.Build;
+import android.support.annotation.RequiresApi;
 import android.util.Log;
 
 import java.io.File;
@@ -34,12 +36,13 @@ public class MyOpusRecorder {
     private static final int STATE_NONE = 0;
     private static final int STATE_STARTED = 1;
 
-    private static final String TAG = OpusRecorder.class.getName();
-    private static final int RECORDER_SAMPLERATE = 16000;
+    private static final String TAG = "AAAAA";
+    private static final int RECORDER_SAMPLE_RATE = 16000;
     private static final int RECORDER_CHANNELS = AudioFormat.CHANNEL_IN_MONO;
     private static final int RECORDER_AUDIO_ENCODING = AudioFormat.ENCODING_PCM_16BIT;
     private volatile int state = STATE_NONE;
 
+    private double soundPressure;
     private AudioRecord recorder = null;
     private Thread recordingThread = new Thread();
     private OpusTool opusTool = new OpusTool();
@@ -54,13 +57,19 @@ public class MyOpusRecorder {
         mEventSender = es;
     }
 
+
     class RecordThread implements Runnable {
+        @RequiresApi(api = Build.VERSION_CODES.M)
         public void run() {
+            Log.e(TAG, "RecordThread");
+
             mProgressTimer = new Timer();
             mRecordTime.setTimeInSecond(0);
             mProgressTimer.schedule(new MyOpusRecorder.MyTimerTask(), 1000, 1000);
 
             writeAudioDataToFile();
+
+
         }
     }
 
@@ -70,11 +79,11 @@ public class MyOpusRecorder {
         if (state == STATE_STARTED)
             return;
 
-        int minBufferSize = AudioRecord.getMinBufferSize(RECORDER_SAMPLERATE, RECORDER_CHANNELS, RECORDER_AUDIO_ENCODING);
+        int minBufferSize = AudioRecord.getMinBufferSize(RECORDER_SAMPLE_RATE, RECORDER_CHANNELS, RECORDER_AUDIO_ENCODING);
         bufferSize = (minBufferSize / 1920 + 1) * 1920;
 
         recorder = new AudioRecord(MediaRecorder.AudioSource.MIC,
-                RECORDER_SAMPLERATE, RECORDER_CHANNELS,
+                RECORDER_SAMPLE_RATE, RECORDER_CHANNELS,
                 RECORDER_AUDIO_ENCODING, bufferSize);
         recorder.startRecording();
         state = STATE_STARTED;
@@ -83,7 +92,6 @@ public class MyOpusRecorder {
         } else {
             filePath = file;
         }
-//        filePath = file.isEmpty() ? initRecordFileName() : file;
         int rst = opusTool.startRecording(filePath);
         if (rst != 1) {
             if (mEventSender != null)
@@ -99,29 +107,31 @@ public class MyOpusRecorder {
         recordingThread.start();
     }
 
-    public double getPressure() {
-        short[] buffer = new short[bufferSize];
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    private void getPressure(ByteBuffer buffer, int size) {
 
-        int bufferReadResult = 1;
-        double db = 0;
-        if (recorder != null) {
-            bufferReadResult = recorder.read(buffer, 0, bufferSize);
-            double sumLevel = 0;
-            for (int i = 0; i < bufferReadResult; i++) {
-                sumLevel += buffer[i];
-            }
-            db = Math.abs((sumLevel / bufferReadResult));
+        soundPressure = 0;
+        double sumLevel = 0;
+        for (int i = 0; i < size -1; i++) {
+            sumLevel += buffer.getShort(i);
         }
-        return db;
+        soundPressure = Math.abs((sumLevel / size));
+    }
+
+    public double getPressure(){
+        return soundPressure;
     }
 
 
+    @RequiresApi(api = Build.VERSION_CODES.M)
     private void writeAudioDataToOpus(ByteBuffer buffer, int size) {
+
         ByteBuffer finalBuffer = ByteBuffer.allocateDirect(size);
         finalBuffer.put(buffer);
+        getPressure(buffer , size);
+
         finalBuffer.rewind();
         boolean flush = false;
-
         //write data to Opus file
         while (state == STATE_STARTED && finalBuffer.hasRemaining()) {
             int oldLimit = -1;
@@ -144,6 +154,7 @@ public class MyOpusRecorder {
         }
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.M)
     private void writeAudioDataToFile() {
         if (state != STATE_STARTED)
             return;
@@ -151,9 +162,10 @@ public class MyOpusRecorder {
         ByteBuffer buffer = ByteBuffer.allocateDirect(bufferSize);
 
         while (state == STATE_STARTED) {
+
             buffer.rewind();
             int len = recorder.read(buffer, bufferSize);
-            Log.d(TAG, "\n lengh of buffersize is " + len);
+
             if (len != AudioRecord.ERROR_INVALID_OPERATION) {
                 try {
                     writeAudioDataToOpus(buffer, len);

@@ -1,4 +1,4 @@
-package com.example.voicerecorder_mvp;
+package com.example.voicerecorder_mvp.custom_view;
 
 import android.animation.Animator;
 import android.content.Context;
@@ -8,6 +8,7 @@ import android.support.constraint.ConstraintLayout;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.MotionEvent;
 import android.view.View;
@@ -22,6 +23,8 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.example.voicerecorder_mvp.R;
+
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -29,15 +32,13 @@ import java.util.TimeZone;
 import java.util.Timer;
 import java.util.TimerTask;
 
-/**
- * Created by Varun John on 4 Dec, 2018
- * Github : https://github.com/varunjohn
- */
+import rm.com.audiowave.AudioWaveView;
+
+
 public class AudioRecordView extends FrameLayout {
 
 
     private float normalScaleY;
-    private LayoutParams params;
     private int h;
     private ConstraintLayout.LayoutParams arrowParams;
     private int ARROW_TOP_MARGIN;
@@ -53,7 +54,8 @@ public class AudioRecordView extends FrameLayout {
         CANCELED,
         LOCKED,
         LOCK_DONE,
-        RELEASED
+        RELEASED,
+        DONE
     }
 
     public interface RecordingListener {
@@ -66,17 +68,22 @@ public class AudioRecordView extends FrameLayout {
 
         void onRecordingCanceled();
 
+        void onSendClick();
+
+        void onDeleteClick();
     }
 
-    private View imageViewAudio, imageViewLockArrow, imageViewLock, imageViewLockHandler, imageViewMic, dustin, dustin_cover, imageViewStop, imageViewSend;
+    private View imageViewAudio, imageViewDelete , imageViewShadow ,imageViewLockArrow, imageViewLock, imageViewLockHandler, imageViewMic, dustin, dustin_cover, imageViewStop, imageViewSend;
     private View layoutDustin, layoutMessage, imageViewAttachment;
     private View layoutSlideCancel, layoutLock;
     private EditText editTextMessage;
     private TextView timeText;
+    private AudioWaveView wave;
+
 
     private ImageView stop, audio, send;
 
-    private Animation animBlink, animJump, animJumpFast, animJumpSlow;
+    private Animation animBlink, animJump, animJumpFast, animJumpSlow, animPressure;
 
     private boolean isDeleting;
     private boolean stopTrackingAction;
@@ -95,6 +102,7 @@ public class AudioRecordView extends FrameLayout {
     private boolean isLocked = false;
 
     private UserBehaviour userBehaviour = UserBehaviour.NONE;
+    private RecordingBehaviour recordingBehaviour;
     private RecordingListener recordingListener;
 
     public AudioRecordView(Context context, AttributeSet attrs, int defStyle) {
@@ -113,6 +121,8 @@ public class AudioRecordView extends FrameLayout {
     }
 
     private void initView() {
+
+        Log.e("AAA" , "init views");
         View view = inflate(getContext(), R.layout.recording_layout, null);
         addView(view);
 
@@ -123,6 +133,10 @@ public class AudioRecordView extends FrameLayout {
         stop = view.findViewById(R.id.imageStop);
         audio = view.findViewById(R.id.imageAudio);
 
+        wave = view.findViewById(R.id.wave);
+
+        imageViewDelete = view.findViewById(R.id.imageViewDelete);
+        imageViewShadow = view.findViewById(R.id.imageAudioShadow);
         imageViewAudio = view.findViewById(R.id.imageViewAudio);
         imageViewStop = view.findViewById(R.id.imageViewStop);
         imageViewSend = view.findViewById(R.id.imageViewSend);
@@ -152,6 +166,7 @@ public class AudioRecordView extends FrameLayout {
                 R.anim.jump_fast);
         animJumpSlow = AnimationUtils.loadAnimation(getContext(),
                 R.anim.jump_slow);
+
 
         setupRecording();
     }
@@ -184,6 +199,10 @@ public class AudioRecordView extends FrameLayout {
         return imageViewAttachment;
     }
 
+    public View getImageViewShadow() {
+        return imageViewShadow;
+    }
+
     public EditText getMessageView() {
         return editTextMessage;
     }
@@ -191,6 +210,24 @@ public class AudioRecordView extends FrameLayout {
     private void setupRecording() {
 
         imageViewSend.animate().scaleX(0f).scaleY(0f).setDuration(100).setInterpolator(new AccelerateInterpolator()).start();
+
+        imageViewDelete.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                recordingListener.onDeleteClick();
+                delete();
+            }
+        });
+
+        imageViewSend.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (recordingBehaviour == RecordingBehaviour.DONE){
+                    recordingListener.onSendClick();
+                    imageViewAudio.setVisibility(VISIBLE);
+                }
+            }
+        });
 
         editTextMessage.addTextChangedListener(new TextWatcher() {
             @Override
@@ -243,7 +280,10 @@ public class AudioRecordView extends FrameLayout {
                         || motionEvent.getAction() == MotionEvent.ACTION_CANCEL) {
 
                     if (motionEvent.getAction() == MotionEvent.ACTION_UP) {
-                        stopRecording(RecordingBehaviour.RELEASED);
+                        recordingBehaviour = RecordingBehaviour.RELEASED;
+                        Log.e("AAA" , "released");
+
+                        stopRecording();
                     }
 
                 } else if (motionEvent.getAction() == MotionEvent.ACTION_MOVE) {
@@ -305,7 +345,9 @@ public class AudioRecordView extends FrameLayout {
             @Override
             public void onClick(View v) {
                 isLocked = false;
-                stopRecording(RecordingBehaviour.LOCK_DONE);
+                recordingBehaviour = RecordingBehaviour.LOCK_DONE;
+                Log.e("AAA" , "lock done");
+                stopRecording();
             }
         });
     }
@@ -373,17 +415,19 @@ public class AudioRecordView extends FrameLayout {
 
     private void locked() {
         stopTrackingAction = true;
-        stopRecording(RecordingBehaviour.LOCKED);
+        recordingBehaviour = RecordingBehaviour.LOCKED;
+        stopRecording();
         isLocked = true;
 //        Animator animator = ViewAnimationUtils.createCircularReveal()
     }
 
     private void canceled() {
         stopTrackingAction = true;
-        stopRecording(RecordingBehaviour.CANCELED);
+        recordingBehaviour = RecordingBehaviour.CANCELED;
+        stopRecording();
     }
 
-    private void stopRecording(RecordingBehaviour recordingBehaviour) {
+    private void stopRecording() {
 
         stopTrackingAction = true;
         firstX = 0;
@@ -430,13 +474,34 @@ public class AudioRecordView extends FrameLayout {
             if (recordingListener != null)
                 recordingListener.onRecordingCanceled();
 
-        } else if (recordingBehaviour == RecordingBehaviour.RELEASED || recordingBehaviour == RecordingBehaviour.LOCK_DONE) {
+        } else if (recordingBehaviour == RecordingBehaviour.RELEASED) {
             timeText.clearAnimation();
             timeText.setVisibility(View.INVISIBLE);
             imageViewMic.setVisibility(View.INVISIBLE);
             layoutMessage.setVisibility(View.VISIBLE);
             imageViewAttachment.setVisibility(View.VISIBLE);
             imageViewStop.setVisibility(View.GONE);
+
+            timerTask.cancel();
+
+            if (recordingListener != null){
+                recordingListener.onRecordingCompleted();
+                recordingListener.onSendClick();
+            }
+        }else if (recordingBehaviour == RecordingBehaviour.LOCK_DONE) {
+            timeText.clearAnimation();
+
+            wave.setVisibility(VISIBLE);
+            imageViewDelete.setVisibility(VISIBLE);
+            imageViewSend.setVisibility(VISIBLE);
+            layoutMessage.setVisibility(View.VISIBLE);
+            imageViewSend.animate().scaleX(1f).scaleY(1f).start();
+
+            imageViewMic.setVisibility(GONE);
+            imageViewAttachment.setVisibility(GONE);
+            editTextMessage.setVisibility(GONE);
+            imageViewStop.setVisibility(GONE);
+            imageViewAudio.setVisibility(GONE);
 
             timerTask.cancel();
 
@@ -463,6 +528,7 @@ public class AudioRecordView extends FrameLayout {
         imageViewLockArrow.startAnimation(animJumpFast);
         imageViewLock.startAnimation(animJump);
         imageViewLockHandler.startAnimation(animJumpSlow);
+
 
         if (audioTimer == null) {
             audioTimer = new Timer();
@@ -596,5 +662,10 @@ public class AudioRecordView extends FrameLayout {
 
             }
         }).start();
+    }
+
+    public void setWaveRawData(byte[] raw){
+
+        wave.setRawData(raw);
     }
 }

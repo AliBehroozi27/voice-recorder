@@ -1,10 +1,9 @@
 package com.example.voicerecorder_mvp;
 
+import com.example.voicerecorder_mvp.pojo.VoiceMessage;
+
 import java.io.IOException;
 import java.util.List;
-
-import io.reactivex.subjects.BehaviorSubject;
-import io.reactivex.subjects.PublishSubject;
 
 public interface MainContract {
     interface Adapter {
@@ -28,6 +27,8 @@ public interface MainContract {
         void cancelRecording();
 
         void initRecyclerView(List<VoiceMessage> voiceMessages);
+
+        void setShadowScale(double pressure);
     }
 
     interface Presenter {
@@ -65,7 +66,14 @@ public interface MainContract {
 
         void deleteVoice(int deletingVoicePosition);
 
-        void deleteVoice(String path);
+        void deleteVoice();
 
+        void getAllVoices();
+
+        byte[] getRecordingRawData();
+
+        byte[] getVoiceRawData(int position);
+
+        void sendVoice();
     }
 }

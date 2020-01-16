@@ -24,7 +24,7 @@
     </ScrollView>
 
 
-    <com.example.voicerecorder_mvp.AudioRecordView
+    <com.example.voicerecorder_mvp.custom_view.AudioRecordView
         android:id="@+id/recordingView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"

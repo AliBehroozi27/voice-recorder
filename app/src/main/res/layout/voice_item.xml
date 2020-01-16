@@ -1,6 +1,5 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:card_view="http://schemas.android.com/tools"
     android:id="@+id/cardView"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
@@ -48,15 +47,20 @@
             android:layout_weight="1"
             android:orientation="vertical">
 
-            <SeekBar
+            <rm.com.audiowave.AudioWaveView
                 android:id="@+id/seek_bar"
-                style="?android:attr/progressBarStyleHorizontal"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center_vertical"
+                app:animateExpansion="false"
+                android:layout_height="40dp"
                 android:minHeight="2dip"
-                android:progressTint="#FFFFFF"
-                android:thumbTint="#FFFFFF" />
+                app:chunkHeight="30dp"
+                app:chunkRadius="1dp"
+                app:chunkSpacing="1dp"
+                app:chunkWidth="2dp"
+                app:minChunkHeight="3dp"
+                app:touchable="true"
+                android:layout_gravity="center_vertical"
+                app:waveColor="#FFFFFF" />
 
 
             <LinearLayout

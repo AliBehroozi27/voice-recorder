@@ -1,6 +1,9 @@
 package com.example.voicerecorder_mvp;
 
+import android.content.Context;
+import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
+import android.net.Uri;
 import android.os.Build;
 import android.os.CountDownTimer;
 import android.os.Environment;
@@ -8,23 +11,32 @@ import android.os.Handler;
 import android.support.annotation.RequiresApi;
 import android.util.Log;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
+import com.example.voicerecorder_mvp.pojo.VoiceMessage;
+import com.example.voicerecorder_mvp.utils.MyOpusRecorder;
 
-import top.oply.opuslib.OpusRecorder;
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
+
+import top.oply.opuslib.OpusEvent;
 
 public class MainPresenter implements MainContract.Presenter {
 
     private static final int LOWER_LIMIT_RECORDING_TIME_MILLISECONDS = 900;
     static final int SEEK_BAR_UPDATE_DELAY = 5;
     private static final int INITIAL_PROGRESS = 0;
-    private static final int START_TIMER_DELAY = 300;
+    private static final int START_TIMER_DELAY = 0;
     private static final int UPPER_LIMIT_RECORDING_TIME_MILLISECONDS = 600000;
     private static final String VOICE_FORMAT = ".ogg";
     private static final String SAVING_PATH = "/VoiceRecorderSimplifiedCoding/Audios";
+    private final Context context;
     boolean isUserSeeking = false;
     private MainActivity view;
     private ChatRvAdapter adapterView;
@@ -40,15 +52,14 @@ public class MainPresenter implements MainContract.Presenter {
     private VoiceMessage voiceMessage;
 
     @RequiresApi(api = Build.VERSION_CODES.M)
-    public MainPresenter(MainActivity view) {
+    public MainPresenter(MainActivity view , Context context) {
         this.view = view;
-        voiceMessages = getAllVoices();
+        this.context = context;
     }
 
     @Override
     public void initViews() {
         view.initRecyclerView(voiceMessages);
-
     }
 
     public MediaPlayer getMediaPlayer() {
@@ -70,7 +81,6 @@ public class MainPresenter implements MainContract.Presenter {
 
     private void initialFileName() {
         File root = Environment.getExternalStorageDirectory();
-        Log.e("BBBBb" , Environment.getExternalStorageDirectory() + SAVING_PATH);
         File file = new File(Environment.getExternalStorageDirectory()+ SAVING_PATH);
         if (!file.exists()) {
             file.mkdirs();
@@ -135,7 +145,7 @@ public class MainPresenter implements MainContract.Presenter {
 
     @Override
     public void initTimer() {
-        int randomInterval = 139;
+        int randomInterval = 100;
 
         if (timer == null) {
             timer = new CountDownTimer(UPPER_LIMIT_RECORDING_TIME_MILLISECONDS, randomInterval) {
@@ -144,7 +154,9 @@ public class MainPresenter implements MainContract.Presenter {
                     int seconds = time / 1000;
                     int minutes = seconds / 60;
                     seconds = seconds - (minutes * 60);
-                    Log.e("bbbb",mediaRecorder.getPressure() + "");
+                    //Log.e("AAA" , mediaRecorder.getPressure()+"");
+                    if (time%500 == 0)
+                        view.setShadowScale(mediaRecorder.getPressure());
                     view.setTimerTv(minutes + ":" + checkSecondsDigit(seconds) + ":" + checkMilliSecondsDigit(milliseconds));
                     time += randomInterval;
                 }
@@ -155,20 +167,28 @@ public class MainPresenter implements MainContract.Presenter {
         }
     }
 
-    private List<VoiceMessage> getAllVoices() {
+    @Override
+    public void getAllVoices() {
         File file = new File(Environment.getExternalStorageDirectory() + SAVING_PATH);
         if (!file.exists()) {
             file.mkdirs();
         }
+        MediaMetadataRetriever mmr = new MediaMetadataRetriever();
+
         String path = Environment.getExternalStorageDirectory() + "/" +SAVING_PATH;
         File directory = new File(path);
-        Log.e("BBBB" , directory.getAbsolutePath());
         File[] files = directory.listFiles();
         for (File f : files) {
-            VoiceMessage voiceMessage = new VoiceMessage(f.getPath(), 0, 0);
+            mmr.setDataSource(context, Uri.parse(f.getPath()));
+            VoiceMessage voiceMessage = new VoiceMessage();
+            Date modifiedTime = new Date(f.lastModified());
+            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+            voiceMessage.setDateModified(sdf.format(modifiedTime.getTime()));
+            voiceMessage.setPath(f.getPath());
+            voiceMessage.setDuration(Integer.parseInt(mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)));
+            voiceMessage.setLastProgress(0);
             voiceMessages.add(voiceMessage);
         }
-        return voiceMessages;
     }
 
 
@@ -184,8 +204,26 @@ public class MainPresenter implements MainContract.Presenter {
             mediaRecorder.stopRecording();
             mediaRecorder = null;
             timer = null;
-            voiceMessages.add(new VoiceMessage(fileName, 0, 0));
         }
+    }
+
+    @Override
+    public void sendVoice() {
+        MediaMetadataRetriever mmr = new MediaMetadataRetriever();
+        File f = new File(fileName);
+        mmr.setDataSource(context, Uri.parse(f.getPath()));
+
+
+        Date modifiedTime = new Date(f.lastModified());
+        SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+
+        VoiceMessage voiceMessage = new VoiceMessage();
+        voiceMessage.setDateModified(sdf.format(modifiedTime.getTime()));
+        voiceMessage.setDuration(Integer.parseInt(mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)));
+        voiceMessage.setLastProgress(0);
+        voiceMessage.setPath(fileName);
+
+        voiceMessages.add(voiceMessage);
         adapterView.notifyDataSetChanged();
     }
 
@@ -195,8 +233,9 @@ public class MainPresenter implements MainContract.Presenter {
     public void startPlay(int position) {
         setPosition(position);
         setVoiceMessage(voiceMessages.get(position));
-        if (mediaPlayer == null && mediaRecorder == null)
+        if (mediaPlayer == null && mediaRecorder == null) {
             initialMediaPlayer();
+        }
         if (mediaPlayer != null && !voiceMessage.isPlaying() && voiceMessage.getPath() != null) {
             voiceMessage.setPlaying(true);
             mediaPlayer.start();
@@ -236,7 +275,7 @@ public class MainPresenter implements MainContract.Presenter {
         if (timer != null) timer.cancel();
         mediaRecorder = null;
         timer = null;
-        deleteVoice(fileName);
+        deleteVoice();
         view.cancelRecording();
     }
 
@@ -263,15 +302,86 @@ public class MainPresenter implements MainContract.Presenter {
     }
 
     @Override
-    public void deleteVoice(String path) {
+    public void deleteVoice() {
         stopPlay();
-        File file = new File(path);
+        File file = new File(fileName);
         if (file.exists()) {
             if (file.delete()) {
                 adapterView.notifyDataSetChanged();
             }
         }
     }
+
+    @Override
+    public byte[] getRecordingRawData() {
+        File file = new File(fileName);
+        int size = (int) file.length();
+        byte[] bytes = new byte[size];
+        try {
+            BufferedInputStream buf = new BufferedInputStream(new FileInputStream(file));
+            buf.read(bytes, 0, bytes.length);
+            buf.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        int  nonZeroBytesCounter = 0;
+        for (int i=0 ; i < bytes.length ;i++) {
+            if (bytes[i] != 0) {
+                nonZeroBytesCounter++;
+            }
+        }
+
+        byte[] voiceBytes = new byte[nonZeroBytesCounter];
+
+        nonZeroBytesCounter = 0 ;
+        for (int i=0 ; i < bytes.length ;i++) {
+            if (bytes[i] != 0) {
+                voiceBytes[nonZeroBytesCounter] = bytes[i];
+                nonZeroBytesCounter++;
+            }
+        }
+
+        return voiceBytes;
+    }
+
+    @Override
+    public byte[] getVoiceRawData(int position) {
+        File file = new File(voiceMessages.get(position).getPath());
+        int size = (int) file.length();
+        byte[] bytes = new byte[size];
+        try {
+            BufferedInputStream buf = new BufferedInputStream(new FileInputStream(file));
+            buf.read(bytes, 0, bytes.length);
+            buf.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+//        int  nonZeroBytesCounter = 0;
+//        for (int i=0 ; i < bytes.length ;i++) {
+//            if (bytes[i] != 0) {
+//                nonZeroBytesCounter++;
+//            }
+//        }
+//
+//        byte[] voiceBytes = new byte[nonZeroBytesCounter];
+//
+//        nonZeroBytesCounter = 0 ;
+//        for (int i=0 ; i < bytes.length ;i++) {
+//            if (bytes[i] != 0) {
+//                voiceBytes[nonZeroBytesCounter] = bytes[i];
+//                nonZeroBytesCounter++;
+//            }
+//        }
+
+        return bytes;
+    }
+
 
     @Override
     public String checkSecondsDigit(int number) {

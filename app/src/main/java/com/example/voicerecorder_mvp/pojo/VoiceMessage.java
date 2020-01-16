@@ -1,4 +1,4 @@
-package com.example.voicerecorder_mvp;
+package com.example.voicerecorder_mvp.pojo;
 
 public class VoiceMessage {
     private String path;
@@ -6,13 +6,10 @@ public class VoiceMessage {
     private int lastProgress;
     private boolean isUserSeeking;
     private boolean isPlaying;
-    private int dateModified;
+    private String dateModified;
 
 
-    public VoiceMessage(String path, int duration, int lastProgress) {
-        this.path = path;
-        this.duration = duration;
-        this.lastProgress = lastProgress;
+    public VoiceMessage() {
     }
 
     public boolean isUserSeeking() {
@@ -56,11 +53,11 @@ public class VoiceMessage {
     }
 
 
-    public int getDateModified() {
+    public String getDateModified() {
         return dateModified;
     }
 
-    public void setDateModified(int dateModified) {
+    public void setDateModified(String dateModified) {
         this.dateModified = dateModified;
     }
 

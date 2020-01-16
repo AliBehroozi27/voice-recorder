@@ -3,7 +3,6 @@ package com.example.voicerecorder_mvp;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.pm.PackageManager;
-import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -13,12 +12,12 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
-import android.view.MotionEvent;
 import android.view.View;
-import android.widget.ImageView;
-import android.widget.TextView;
 import android.widget.Toast;
 
+
+import com.example.voicerecorder_mvp.custom_view.AudioRecordView;
+import com.example.voicerecorder_mvp.pojo.VoiceMessage;
 
 import java.util.List;
 
@@ -63,8 +62,9 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
         initViews();
 
         //init presenter
-        presenter = new MainPresenter(this);
+        presenter = new MainPresenter(this,this);
         presenter.requestPermission();
+        presenter.getAllVoices();
         presenter.initViews();
     }
 
@@ -148,6 +148,22 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
     }
 
     @Override
+    public void setShadowScale(double pressure) {
+        float p = getShadowScale((float)pressure);
+        Log.e("AAA" , "" + (p));
+        audioRecordView.getImageViewShadow().animate().scaleY(p).scaleX(p).setDuration(500).start();
+    }
+
+    private float getShadowScale(float pressure){
+        if (pressure/220 > 1.5){
+            return (float)1.5;
+        }
+        else {
+            return pressure / 220;
+        }
+    }
+
+    @Override
     public void setTimerTv(String time) {
         //messageArea.setText(time);
     }
@@ -163,10 +179,21 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
 
     }
 
+    @Override
+    public void onSendClick() {
+        presenter.sendVoice();
+    }
+
+    @Override
+    public void onDeleteClick() {
+        presenter.deleteVoice();
+    }
+
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void onRecordingCompleted() {
         presenter.stopRecord();
+        audioRecordView.setWaveRawData(presenter.getRecordingRawData());
     }
 
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
