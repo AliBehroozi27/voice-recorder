@@ -29,6 +29,12 @@ public interface MainContract {
         void initRecyclerView(List<VoiceMessage> voiceMessages);
 
         void setShadowScale(double pressure);
+
+        void playRecording();
+
+        void stopPlayRecording();
+
+        void updateRecordingPlaySeekBar(int progress);
     }
 
     interface Presenter {
@@ -75,5 +81,7 @@ public interface MainContract {
         byte[] getVoiceRawData(int position);
 
         void sendVoice();
+
+        void startPlayRecording();
     }
 }

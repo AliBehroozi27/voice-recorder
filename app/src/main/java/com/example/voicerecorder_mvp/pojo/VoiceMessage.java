@@ -7,6 +7,7 @@ public class VoiceMessage {
     private boolean isUserSeeking;
     private boolean isPlaying;
     private String dateModified;
+    private byte[] rawData;
 
 
     public VoiceMessage() {
@@ -63,5 +64,13 @@ public class VoiceMessage {
 
     public String getString(){
         return "  duration : " + duration + " | lastprogress : " + lastProgress + " | isPlaying :" + isPlaying;
+    }
+
+    public void setRawData(byte[] rawData) {
+        this.rawData = rawData;
+    }
+
+    public byte[] getRawData() {
+        return rawData;
     }
 }

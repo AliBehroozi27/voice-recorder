@@ -56,7 +56,7 @@
                 app:chunkHeight="30dp"
                 app:chunkRadius="1dp"
                 app:chunkSpacing="1dp"
-                app:chunkWidth="2dp"
+                app:chunkWidth="3dp"
                 app:minChunkHeight="3dp"
                 app:touchable="true"
                 android:layout_gravity="center_vertical"

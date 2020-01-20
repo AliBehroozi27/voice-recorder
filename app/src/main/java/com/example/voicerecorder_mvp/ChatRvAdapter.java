@@ -3,8 +3,6 @@ package com.example.voicerecorder_mvp;
 
 import android.content.Context;
 import android.graphics.drawable.Drawable;
-import android.media.MediaMetadataRetriever;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
 import android.support.annotation.NonNull;
@@ -19,11 +17,7 @@ import android.widget.TextView;
 
 import com.example.voicerecorder_mvp.pojo.VoiceMessage;
 
-import java.io.File;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 
 import butterknife.BindDrawable;
 import butterknife.BindView;
@@ -75,11 +69,13 @@ public class ChatRvAdapter extends RecyclerView.Adapter<ChatRvAdapter.ViewHolder
     public void onBindViewHolder(@NonNull ChatRvAdapter.ViewHolder holder, int position) {
         VoiceMessage voiceMessage = voiceMessages.get(position);
 
-        File file = new File(voiceMessage.getPath());
+        if (voiceMessage.getRawData() == null)
+            holder.seekBar.setRawData(presenter.getVoiceRawData(position));
+        else
+            holder.seekBar.setRawData(voiceMessages.get(position).getRawData());
 
 
-        holder.seekBar.setRawData(presenter.getVoiceRawData(position));
-        holder.seekBar.setProgress(convertCurrentMediaPositionIntoPercent(voiceMessage.getLastProgress(), voiceMessage.getDuration()));
+        holder.seekBar.setProgress(presenter.convertCurrentMediaPositionIntoPercent(voiceMessage.getLastProgress(), voiceMessage.getDuration()));
         holder.dateModified.setText(voiceMessage.getDateModified());
 
         if (voiceMessage.isPlaying()) {
@@ -91,7 +87,7 @@ public class ChatRvAdapter extends RecyclerView.Adapter<ChatRvAdapter.ViewHolder
                 holder.seekBar.setProgress(voiceMessage.getLastProgress());
             }
             holder.playButton.setImageResource(R.drawable.ic_play);
-            holder.timer.setText(calculateTime(voiceMessage.getDuration()));
+            holder.timer.setText(presenter.calculateTime(voiceMessage.getDuration()));
         }
 
         bindEvents(holder, voiceMessage, position);
@@ -112,7 +108,7 @@ public class ChatRvAdapter extends RecyclerView.Adapter<ChatRvAdapter.ViewHolder
             @Override
             public void onProgressChanged(float progress, boolean fromUser) {
                 int position = (int)((progress / 100) * voiceMessage.getDuration());
-                holder.timer.setText(calculateTime(position));
+                holder.timer.setText(presenter.calculateTime(position));
                 if (presenter.getMediaPlayer() != null && presenter.getVoiceMessage().getPath().equals(voiceMessage.getPath()) && fromUser) {
                     presenter.isUserSeeking = true;
                     presenter.seek(position);
@@ -123,21 +119,6 @@ public class ChatRvAdapter extends RecyclerView.Adapter<ChatRvAdapter.ViewHolder
             }
         });
 
-    }
-
-    private String calculateTime(Integer duration) {
-        int seconds = duration / 1000;
-        int minutes = seconds / 60;
-        seconds = seconds - (minutes * 60);
-        return minutes + ":" + presenter.checkSecondsDigit(seconds);
-
-    }
-
-    private float convertCurrentMediaPositionIntoPercent(int currentPosition, int duration) {
-        if (duration < 1){
-            return 0;
-        }
-        return currentPosition * 100 / duration;
     }
 
 
@@ -151,7 +132,6 @@ public class ChatRvAdapter extends RecyclerView.Adapter<ChatRvAdapter.ViewHolder
             voiceMessages.get(i).setPlaying(false);
             voiceMessages.set(i, voiceMessages.get(i));
         }
-        notifyDataSetChanged();
     }
 
     VoiceMessage getItem(int id) {
@@ -206,43 +186,44 @@ public class ChatRvAdapter extends RecyclerView.Adapter<ChatRvAdapter.ViewHolder
                     position = getAdapterPosition();
                     VoiceMessage voiceMessage = voiceMessages.get(position);
                     if (!presenter.isRecording()) {
-                    if (voiceMessage.isPlaying()) {
-                        if (position == last_index) {
-                            voiceMessage.setPlaying(false);
-                            presenter.setPlaying(false);
-                            voiceMessages.set(position, voiceMessage);
-                            presenter.stopPlay();
-                            notifyDataSetChanged();
+                        if (voiceMessage.isPlaying()) {
+                            if (position == last_index) {
+                                voiceMessage.setPlaying(false);
+                                presenter.setPlaying(false);
+                                voiceMessages.set(position, voiceMessage);
+                                presenter.stopPlay();
+                            } else {
+                                if (last_index != -1) {
+                                    voiceMessages.get(last_index).setLastProgress(0);
+                                    voiceMessages.get(last_index).setPlaying(false);
+                                }
+                                presenter.stopPlay();
+                                presenter.startPlay(position);
+                                presenter.setPlaying(true);
+                                voiceMessage.setPlaying(true);
+                                notifyItemChanged(last_index);
+                                last_index = position;
+                            }
+
                         } else {
-                            markAllPaused();
-                            presenter.stopPlay();
-                            presenter.startPlay(position);
-                            presenter.setPlaying(true);
+
+                            if (position == last_index) {
+                                presenter.startPlay(position);
+
+                            } else {
+                                if (last_index != -1) {
+                                    voiceMessages.get(last_index).setLastProgress(0);
+                                    voiceMessages.get(last_index).setPlaying(false);
+                                }
+                                presenter.stopPlay();
+                                presenter.startPlay(position);
+                            }
                             voiceMessage.setPlaying(true);
-                            notifyDataSetChanged();
+                            presenter.setPlaying(true);
+                            notifyItemChanged(last_index);
                             last_index = position;
                         }
-
-                    } else {
-                        if (position == last_index) {
-                            markAllPaused();
-                            presenter.startPlay(position);
-                            voiceMessage.setPlaying(true);
-                            presenter.setPlaying(true);
-                            notifyDataSetChanged();
-
-                            last_index = position;
-                        } else {
-                            markAllPaused();
-                            presenter.stopPlay();
-                            presenter.startPlay(position);
-                            voiceMessage.setPlaying(true);
-                            presenter.setPlaying(true);
-                            notifyDataSetChanged();
-                            last_index = position;
-                        }
-
-                    }
+                        notifyItemChanged(position);
                     }
                 }
             });
@@ -259,8 +240,7 @@ public class ChatRvAdapter extends RecyclerView.Adapter<ChatRvAdapter.ViewHolder
             this.holder = holder;
             if (presenter.getMediaPlayer() != null) {
                 int currentPosition = presenter.getMediaPlayer().getCurrentPosition();
-                //this.holder.seekBar.setMax(presenter.getMediaPlayer().getDuration());
-                this.holder.seekBar.setProgress(convertCurrentMediaPositionIntoPercent(currentPosition, presenter.getVoiceMessage().getDuration()));
+                this.holder.seekBar.setProgress(presenter.convertCurrentMediaPositionIntoPercent(currentPosition, presenter.getVoiceMessage().getDuration()));
                 presenter.getVoiceMessage().setLastProgress(currentPosition);
             }
             mHandler.postDelayed(runnable, MainPresenter.SEEK_BAR_UPDATE_DELAY);
@@ -273,7 +253,6 @@ public class ChatRvAdapter extends RecyclerView.Adapter<ChatRvAdapter.ViewHolder
 
         @Override
         public void startPlaying() {
-            //seekBar.setProgress(presenter.getLastProgress());
             presenter.seek(presenter.getLastProgress());
         }
 

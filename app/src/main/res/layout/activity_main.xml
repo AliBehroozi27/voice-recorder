@@ -4,22 +4,22 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:orientation="vertical"
     tools:context=".MainActivity">
 
 
     <ScrollView
-        android:id="@+id/scrollView2"
+        android:id="@+id/scrollView"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toTopOf="parent"
         android:fillViewport="true">
 
         <android.support.v7.widget.RecyclerView
             android:id="@+id/recycler_view"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_gravity="right"
-            app:layout_constraintTop_toTopOf="parent"
-            tools:itemCount="15"
+            android:layout_height="match_parent"
+            tools:itemCount="25"
             tools:listitem="@layout/voice_item" />
     </ScrollView>
 
@@ -27,8 +27,7 @@
     <com.example.voicerecorder_mvp.custom_view.AudioRecordView
         android:id="@+id/recordingView"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_gravity="bottom" />
+        android:layout_height="match_parent" />
 
 
 </android.support.constraint.ConstraintLayout>

@@ -110,16 +110,20 @@ public class MyOpusRecorder {
     @RequiresApi(api = Build.VERSION_CODES.M)
     private void getPressure(ByteBuffer buffer, int size) {
 
-        soundPressure = 0;
+        double sp = 0;
         double sumLevel = 0;
         for (int i = 0; i < size -1; i++) {
             sumLevel += buffer.getShort(i);
         }
-        soundPressure = Math.abs((sumLevel / size));
+        sp = Math.abs((sumLevel / size));
+
+        soundPressure = (soundPressure + sp)/2;
     }
 
     public double getPressure(){
-        return soundPressure;
+        double sp = soundPressure;
+        soundPressure = 0;
+        return sp;
     }
 
 

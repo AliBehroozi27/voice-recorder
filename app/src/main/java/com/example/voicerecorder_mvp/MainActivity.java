@@ -5,16 +5,17 @@ import android.annotation.SuppressLint;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.annotation.RequiresApi;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.SimpleItemAnimator;
 import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
-
 
 import com.example.voicerecorder_mvp.custom_view.AudioRecordView;
 import com.example.voicerecorder_mvp.pojo.VoiceMessage;
@@ -24,6 +25,7 @@ import java.util.List;
 import butterknife.BindString;
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import rm.com.audiowave.OnProgressListener;
 
 public class MainActivity extends AppCompatActivity implements MainContract.View , AudioRecordView.RecordingListener {
 
@@ -47,6 +49,7 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
     private float positionY,positionX;
     private MainPresenter presenter;
     private ChatRvAdapter chatAdapter;
+    private Handler mHandler = new Handler();
 
 
     @RequiresApi(api = Build.VERSION_CODES.M)
@@ -106,6 +109,9 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
     public void initViews() {
         audioRecordView.setRecordingListener(this);
 
+        ((SimpleItemAnimator) messagesRv.getItemAnimator()).setSupportsChangeAnimations(false);
+
+
         audioRecordView.getAttachmentView().setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -117,6 +123,45 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
             public void onClick(View v) {
                 String msg = audioRecordView.getMessageView().getText().toString();
                 audioRecordView.getMessageView().setText("");
+            }
+        });
+
+        audioRecordView.getPlay().setOnClickListener(new View.OnClickListener() {
+            @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+            @Override
+            public void onClick(View v) {
+                if (presenter.isPlayRecording()) {
+                    presenter.stopPlayRecording();
+                    mHandler.removeCallbacks(runnable);
+                } else {
+                    presenter.startPlayRecording();
+                    updateSeekBar();
+                }
+            }
+        });
+
+        audioRecordView.getWave().setOnProgressListener(new OnProgressListener() {
+            @Override
+            public void onStartTracking(float v) {
+
+            }
+
+            @Override
+            public void onStopTracking(float v) {
+
+            }
+
+            @Override
+            public void onProgressChanged(float progress, boolean fromUser) {
+                int position = (int) ((progress / 100) * presenter.getRecordingDuration());
+                audioRecordView.getTimeText().setText(presenter.calculateTime(position));
+                if (presenter.getMediaPlayer() != null && fromUser) {
+                    presenter.isUserSeeking = true;
+                    presenter.seek(position);
+                    presenter.setRecordingLastProgress(position);
+                } else if (position == presenter.getPosition() || fromUser) {
+                    presenter.setRecordingLastProgress(position);
+                }
             }
         });
     }
@@ -150,17 +195,29 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
     @Override
     public void setShadowScale(double pressure) {
         float p = getShadowScale((float)pressure);
-        Log.e("AAA" , "" + (p));
+        //Log.e("AAA" , "" + (p));
         audioRecordView.getImageViewShadow().animate().scaleY(p).scaleX(p).setDuration(500).start();
     }
 
+    @Override
+    public void playRecording() {
+        audioRecordView.getPlay().setImageResource(R.drawable.ic_puase_white);
+    }
+
+    @Override
+    public void stopPlayRecording() {
+        audioRecordView.getPlay().setImageResource(R.drawable.ic_play_white);
+        audioRecordView.getWave().setProgress(presenter.convertCurrentMediaPositionIntoPercent(presenter.getRecordingLastProgress(), presenter.getRecordingDuration()));
+        mHandler.removeCallbacks(runnable);
+    }
+
+    @Override
+    public void updateRecordingPlaySeekBar(int progress) {
+
+    }
+
     private float getShadowScale(float pressure){
-        if (pressure/220 > 1.5){
-            return (float)1.5;
-        }
-        else {
-            return pressure / 220;
-        }
+        return pressure / 1300 > 0.5 ? (float) 1.5 : pressure / 1300 + 1 < 1.3 ? 1 : pressure / 1300 + 1;
     }
 
     @Override
@@ -179,9 +236,14 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
 
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void onSendClick() {
-        presenter.sendVoice();
+        if (presenter.getTime() < MainPresenter.LOWER_LIMIT_RECORDING_TIME_MILLISECONDS ) {
+            //presenter.cancelRecording();
+        } else {
+            presenter.sendVoice();
+        }
     }
 
     @Override
@@ -189,16 +251,50 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
         presenter.deleteVoice();
     }
 
+
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void onRecordingCompleted() {
         presenter.stopRecord();
-        audioRecordView.setWaveRawData(presenter.getRecordingRawData());
+        if(presenter.getTime() < MainPresenter.LOWER_LIMIT_RECORDING_TIME_MILLISECONDS && !presenter.isRecording()){
+            audioRecordView.delete();
+            presenter.deleteVoice();
+        }else {
+        audioRecordView.setWaveRawData(presenter.getRecordingRawData());}
     }
 
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void onRecordingCanceled() {
         presenter.cancelRecording();
+    }
+
+    Runnable runnable = new Runnable() {
+        @Override
+        public void run() {
+            updateSeekBar();
+        }
+    };
+
+    private void updateSeekBar() {
+        if (presenter.getMediaPlayer() != null) {
+            int currentPosition = presenter.getMediaPlayer().getCurrentPosition();
+            audioRecordView.getWave().setProgress(presenter.convertCurrentMediaPositionIntoPercent(currentPosition, presenter.getRecordingDuration()));
+            presenter.setRecordingLastProgress(currentPosition);
+        }
+        mHandler.postDelayed(runnable, MainPresenter.SEEK_BAR_UPDATE_DELAY);
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+    @Override
+    protected void onDestroy() {
+        Log.e("AAA" , "onDestroy");
+        if (presenter.isRecording()) {
+            Log.e("AAA" , "canceling");
+            //presenter.stopRecord();
+            presenter.cancelRecording();
+            //presenter.deleteVoice();
+        }
+        super.onDestroy();
     }
 }

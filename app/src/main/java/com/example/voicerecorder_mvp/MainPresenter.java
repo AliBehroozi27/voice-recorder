@@ -25,12 +25,10 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-import top.oply.opuslib.OpusEvent;
-
 public class MainPresenter implements MainContract.Presenter {
 
-    private static final int LOWER_LIMIT_RECORDING_TIME_MILLISECONDS = 900;
-    static final int SEEK_BAR_UPDATE_DELAY = 5;
+    public static final int LOWER_LIMIT_RECORDING_TIME_MILLISECONDS = 900;
+    public static final int SEEK_BAR_UPDATE_DELAY = 5;
     private static final int INITIAL_PROGRESS = 0;
     private static final int START_TIMER_DELAY = 0;
     private static final int UPPER_LIMIT_RECORDING_TIME_MILLISECONDS = 600000;
@@ -50,6 +48,9 @@ public class MainPresenter implements MainContract.Presenter {
     private int time;
     private List<VoiceMessage> voiceMessages = new ArrayList<VoiceMessage>();
     private VoiceMessage voiceMessage;
+    private boolean isPlayRecording;
+    private int recordingDuration = -1;
+    private int recordingLastProgress = 0;
 
     @RequiresApi(api = Build.VERSION_CODES.M)
     public MainPresenter(MainActivity view , Context context) {
@@ -93,7 +94,7 @@ public class MainPresenter implements MainContract.Presenter {
     public void initialMediaPlayer() {
         mediaPlayer = new MediaPlayer();
         try {
-            if (isRecording) {
+            if (isRecording || isPlayRecording) {
                 mediaPlayer.setDataSource(fileName);
             } else {
                 mediaPlayer.setDataSource(voiceMessage.getPath());
@@ -107,9 +108,15 @@ public class MainPresenter implements MainContract.Presenter {
             @Override
             public void onCompletion(MediaPlayer mp) {
                 stopPlay();
-                voiceMessage.setLastProgress(INITIAL_PROGRESS);
-                voiceMessages.set(position, voiceMessage);
-                adapterView.notifyDataSetChanged();
+                if (isPlayRecording) {
+                    stopPlayRecording();
+                    setRecordingLastProgress(0);
+                    view.stopPlayRecording();
+                } else {
+                    voiceMessage.setLastProgress(INITIAL_PROGRESS);
+                    voiceMessages.set(position, voiceMessage);
+                    adapterView.notifyItemChanged(position);
+                }
             }
         });
 
@@ -154,7 +161,6 @@ public class MainPresenter implements MainContract.Presenter {
                     int seconds = time / 1000;
                     int minutes = seconds / 60;
                     seconds = seconds - (minutes * 60);
-                    //Log.e("AAA" , mediaRecorder.getPressure()+"");
                     if (time%500 == 0)
                         view.setShadowScale(mediaRecorder.getPressure());
                     view.setTimerTv(minutes + ":" + checkSecondsDigit(seconds) + ":" + checkMilliSecondsDigit(milliseconds));
@@ -195,10 +201,8 @@ public class MainPresenter implements MainContract.Presenter {
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void stopRecord() {
-
-        if (getTime() < LOWER_LIMIT_RECORDING_TIME_MILLISECONDS) {
-            cancelRecording();
-        } else {
+        Log.e("AAA", "stop");
+        if (isRecording) {
             timer.cancel();
             isRecording = false;
             mediaRecorder.stopRecording();
@@ -213,7 +217,6 @@ public class MainPresenter implements MainContract.Presenter {
         File f = new File(fileName);
         mmr.setDataSource(context, Uri.parse(f.getPath()));
 
-
         Date modifiedTime = new Date(f.lastModified());
         SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
 
@@ -224,7 +227,22 @@ public class MainPresenter implements MainContract.Presenter {
         voiceMessage.setPath(fileName);
 
         voiceMessages.add(voiceMessage);
-        adapterView.notifyDataSetChanged();
+        adapterView.notifyItemInserted(voiceMessages.size() - 1);
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+    @Override
+    public void startPlayRecording() {
+        view.playRecording();
+        setPlayRecording(true);
+        if (mediaPlayer == null && mediaRecorder == null) {
+            initialMediaPlayer();
+        }
+        if (mediaPlayer != null) {
+            mediaPlayer.seekTo(recordingLastProgress);
+            mediaPlayer.start();
+        }
+
     }
 
 
@@ -240,6 +258,21 @@ public class MainPresenter implements MainContract.Presenter {
             voiceMessage.setPlaying(true);
             mediaPlayer.start();
             adapterView.getViewHolder().startPlaying();
+        }
+    }
+
+
+    public void stopPlayRecording() {
+        view.stopPlayRecording();
+        setPlayRecording(false);
+        if (mediaPlayer != null) {
+            recordingLastProgress = mediaPlayer.getCurrentPosition();
+            try {
+                mediaPlayer.release();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            mediaPlayer = null;
         }
     }
 
@@ -268,6 +301,7 @@ public class MainPresenter implements MainContract.Presenter {
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void cancelRecording() {
+        Log.e("AAA" , "CANCEL " + mediaRecorder);
         if (mediaRecorder != null) {
             mediaRecorder.release();
             mediaRecorder.stopRecording();
@@ -295,8 +329,8 @@ public class MainPresenter implements MainContract.Presenter {
         File file = new File(voiceMessages.get(deletingVoicePosition).getPath());
         if (file.exists()) {
             if (file.delete()) {
+                adapterView.notifyItemRemoved(deletingVoicePosition);
                 voiceMessages.remove(deletingVoicePosition);
-                adapterView.notifyDataSetChanged();
             }
         }
     }
@@ -304,10 +338,13 @@ public class MainPresenter implements MainContract.Presenter {
     @Override
     public void deleteVoice() {
         stopPlay();
+        Log.e("AAA", fileName + "o");
         File file = new File(fileName);
         if (file.exists()) {
+            Log.e("AAA", "exits");
             if (file.delete()) {
-                adapterView.notifyDataSetChanged();
+                Log.e("AAA", "delete");
+                //adapterView.notifyDataSetChanged();
             }
         }
     }
@@ -327,24 +364,7 @@ public class MainPresenter implements MainContract.Presenter {
             e.printStackTrace();
         }
 
-        int  nonZeroBytesCounter = 0;
-        for (int i=0 ; i < bytes.length ;i++) {
-            if (bytes[i] != 0) {
-                nonZeroBytesCounter++;
-            }
-        }
-
-        byte[] voiceBytes = new byte[nonZeroBytesCounter];
-
-        nonZeroBytesCounter = 0 ;
-        for (int i=0 ; i < bytes.length ;i++) {
-            if (bytes[i] != 0) {
-                voiceBytes[nonZeroBytesCounter] = bytes[i];
-                nonZeroBytesCounter++;
-            }
-        }
-
-        return voiceBytes;
+        return bytes;
     }
 
     @Override
@@ -362,23 +382,7 @@ public class MainPresenter implements MainContract.Presenter {
             e.printStackTrace();
         }
 
-//        int  nonZeroBytesCounter = 0;
-//        for (int i=0 ; i < bytes.length ;i++) {
-//            if (bytes[i] != 0) {
-//                nonZeroBytesCounter++;
-//            }
-//        }
-//
-//        byte[] voiceBytes = new byte[nonZeroBytesCounter];
-//
-//        nonZeroBytesCounter = 0 ;
-//        for (int i=0 ; i < bytes.length ;i++) {
-//            if (bytes[i] != 0) {
-//                voiceBytes[nonZeroBytesCounter] = bytes[i];
-//                nonZeroBytesCounter++;
-//            }
-//        }
-
+        voiceMessages.get(position).setRawData(bytes);
         return bytes;
     }
 
@@ -391,6 +395,21 @@ public class MainPresenter implements MainContract.Presenter {
     @Override
     public String checkMilliSecondsDigit(int number) {
         return number <= 9 ? "00" + number : number <= 99 ? "0" + number : String.valueOf(number%1000) ;
+    }
+
+    public float convertCurrentMediaPositionIntoPercent(int currentPosition, int duration) {
+        if (duration < 1) {
+            return 0;
+        }
+        return currentPosition * 100 / duration;
+    }
+
+    public String calculateTime(Integer duration) {
+        int seconds = duration / 1000;
+        int minutes = seconds / 60;
+        seconds = seconds - (minutes * 60);
+        return minutes + ":" + checkSecondsDigit(seconds);
+
     }
 
 
@@ -436,5 +455,32 @@ public class MainPresenter implements MainContract.Presenter {
 
     public void setRecording(boolean recording) {
         isRecording = recording;
+    }
+
+    public int getRecordingDuration() {
+        if (recordingDuration == -1) {
+            MediaMetadataRetriever mmr = new MediaMetadataRetriever();
+            File f = new File(fileName);
+            mmr.setDataSource(context, Uri.parse(f.getPath()));
+            recordingDuration = Integer.parseInt(mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION));
+        }
+        return recordingDuration;
+
+    }
+
+    public void setRecordingLastProgress(int currentPosition) {
+        recordingLastProgress = currentPosition;
+    }
+
+    public boolean isPlayRecording() {
+        return isPlayRecording;
+    }
+
+    public void setPlayRecording(boolean playRecording) {
+        isPlayRecording = playRecording;
+    }
+
+    public int getRecordingLastProgress() {
+        return recordingLastProgress;
     }
 }
