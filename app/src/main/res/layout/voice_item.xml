@@ -16,16 +16,16 @@
 
         <FrameLayout
             android:id="@+id/play_audio_lay"
-            android:layout_width="30dp"
-            android:layout_height="50dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:layout_gravity="center_vertical"
-            android:layout_marginStart="10dp"
-            android:layout_marginLeft="10dp">
+            android:layout_marginStart="5dp"
+            android:layout_marginLeft="5dp">
 
             <ImageView
                 android:id="@+id/play_button"
-                android:layout_width="30dp"
-                android:layout_height="30dp"
+                android:layout_width="35dp"
+                android:layout_height="35dp"
                 android:layout_gravity="center"
                 android:src="@drawable/ic_play"
                 android:tint="#DDDDDD" />

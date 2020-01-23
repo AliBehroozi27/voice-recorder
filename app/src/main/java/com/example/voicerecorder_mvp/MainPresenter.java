@@ -125,6 +125,7 @@ public class MainPresenter implements MainContract.Presenter {
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void startRecord() {
+        mediaPlayer = null;
         stopPlay();
         if (mediaRecorder == null)
             initialMediaRecorder();
@@ -163,7 +164,7 @@ public class MainPresenter implements MainContract.Presenter {
                     seconds = seconds - (minutes * 60);
                     if (time%500 == 0)
                         view.setShadowScale(mediaRecorder.getPressure());
-                    view.setTimerTv(minutes + ":" + checkSecondsDigit(seconds) + ":" + checkMilliSecondsDigit(milliseconds));
+                    //view.setTimerTv(minutes + ":" + checkSecondsDigit(seconds) + ":" + checkMilliSecondsDigit(milliseconds));
                     time += randomInterval;
                 }
 
@@ -203,12 +204,14 @@ public class MainPresenter implements MainContract.Presenter {
     public void stopRecord() {
         Log.e("AAA", "stop");
         if (isRecording) {
-            timer.cancel();
-            isRecording = false;
             mediaRecorder.stopRecording();
-            mediaRecorder = null;
-            timer = null;
         }
+        if (timer != null){
+            timer.cancel();
+        }
+        isRecording = false;
+        mediaRecorder = null;
+        timer = null;
     }
 
     @Override
@@ -245,7 +248,6 @@ public class MainPresenter implements MainContract.Presenter {
 
     }
 
-
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void startPlay(int position) {
@@ -280,6 +282,7 @@ public class MainPresenter implements MainContract.Presenter {
     public void stopPlay() {
         if (voiceMessage != null && mediaPlayer != null) {
             voiceMessage.setPlaying(false);
+            Log.e("AAA" , " stop :  " + mediaPlayer.getCurrentPosition());
             voiceMessage.setLastProgress(mediaPlayer.getCurrentPosition());
             try {
                 mediaPlayer.release();
@@ -301,7 +304,7 @@ public class MainPresenter implements MainContract.Presenter {
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void cancelRecording() {
-        Log.e("AAA" , "CANCEL " + mediaRecorder);
+        //Log.e("AAA" , "CANCEL " + mediaRecorder);
         if (mediaRecorder != null) {
             mediaRecorder.release();
             mediaRecorder.stopRecording();
@@ -309,6 +312,7 @@ public class MainPresenter implements MainContract.Presenter {
         if (timer != null) timer.cancel();
         mediaRecorder = null;
         timer = null;
+        isRecording = false;
         deleteVoice();
         view.cancelRecording();
     }
@@ -338,12 +342,12 @@ public class MainPresenter implements MainContract.Presenter {
     @Override
     public void deleteVoice() {
         stopPlay();
-        Log.e("AAA", fileName + "o");
+        //Log.e("AAA", fileName + "o");
         File file = new File(fileName);
         if (file.exists()) {
-            Log.e("AAA", "exits");
+            //Log.e("AAA", "exits");
             if (file.delete()) {
-                Log.e("AAA", "delete");
+                //Log.e("AAA", "delete");
                 //adapterView.notifyDataSetChanged();
             }
         }
@@ -401,7 +405,7 @@ public class MainPresenter implements MainContract.Presenter {
         if (duration < 1) {
             return 0;
         }
-        return currentPosition * 100 / duration;
+        return (float)currentPosition * 100 / (float)duration;
     }
 
     public String calculateTime(Integer duration) {
@@ -462,7 +466,11 @@ public class MainPresenter implements MainContract.Presenter {
             MediaMetadataRetriever mmr = new MediaMetadataRetriever();
             File f = new File(fileName);
             mmr.setDataSource(context, Uri.parse(f.getPath()));
-            recordingDuration = Integer.parseInt(mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION));
+            try{
+            recordingDuration = Integer.parseInt(mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION));}
+            catch (Exception e){
+                e.printStackTrace();
+            }
         }
         return recordingDuration;
 

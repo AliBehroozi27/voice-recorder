@@ -18,8 +18,6 @@ public interface MainContract {
 
         void getPermission();
 
-        void setTimerTv(String time);
-
         void prepareForRecording();
 
         void startRecording();

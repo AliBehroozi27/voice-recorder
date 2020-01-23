@@ -81,6 +81,10 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
             requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.RECORD_AUDIO, Manifest.permission.WRITE_EXTERNAL_STORAGE},
                     REQUEST_PERMISSION);
 
+        }else {
+            Log.e("AAA" , "" + (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED));
+            Log.e("AAA" , "" + (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED));
+            Log.e("AAA" , "" + (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED));
         }
     }
 
@@ -220,10 +224,6 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
         return pressure / 1300 > 0.5 ? (float) 1.5 : pressure / 1300 + 1 < 1.3 ? 1 : pressure / 1300 + 1;
     }
 
-    @Override
-    public void setTimerTv(String time) {
-        //messageArea.setText(time);
-    }
 
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
@@ -279,6 +279,10 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
     private void updateSeekBar() {
         if (presenter.getMediaPlayer() != null) {
             int currentPosition = presenter.getMediaPlayer().getCurrentPosition();
+            if (currentPosition < presenter.getRecordingLastProgress()){
+                currentPosition = presenter.getRecordingLastProgress();
+            }
+            Log.e("AAA" , ""+currentPosition+"  "+presenter.getRecordingDuration());
             audioRecordView.getWave().setProgress(presenter.convertCurrentMediaPositionIntoPercent(currentPosition, presenter.getRecordingDuration()));
             presenter.setRecordingLastProgress(currentPosition);
         }
@@ -287,14 +291,13 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
 
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
-    protected void onDestroy() {
+    protected void onPause() {
         Log.e("AAA" , "onDestroy");
         if (presenter.isRecording()) {
             Log.e("AAA" , "canceling");
-            //presenter.stopRecord();
-            presenter.cancelRecording();
-            //presenter.deleteVoice();
+            audioRecordView.setRecordingBehaviour(AudioRecordView.RecordingBehaviour.LOCK_DONE);
+            audioRecordView.stopRecording();
         }
-        super.onDestroy();
+        super.onPause();
     }
 }
