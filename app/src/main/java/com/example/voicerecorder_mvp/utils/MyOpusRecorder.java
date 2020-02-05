@@ -7,6 +7,7 @@ import android.os.Build;
 import android.support.annotation.RequiresApi;
 import android.util.Log;
 
+
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.Timer;
@@ -17,6 +18,7 @@ import top.oply.opuslib.OpusRecorder;
 import top.oply.opuslib.OpusTool;
 import top.oply.opuslib.OpusTrackInfo;
 import top.oply.opuslib.Utils;
+
 
 public class MyOpusRecorder {
     private MyOpusRecorder() {
@@ -36,7 +38,7 @@ public class MyOpusRecorder {
     private static final int STATE_NONE = 0;
     private static final int STATE_STARTED = 1;
 
-    private static final String TAG = "AAAAA";
+    private static final String TAG = "OPUS_RECORDER";
     private static final int RECORDER_SAMPLE_RATE = 16000;
     private static final int RECORDER_CHANNELS = AudioFormat.CHANNEL_IN_MONO;
     private static final int RECORDER_AUDIO_ENCODING = AudioFormat.ENCODING_PCM_16BIT;
@@ -68,8 +70,6 @@ public class MyOpusRecorder {
             mProgressTimer.schedule(new MyOpusRecorder.MyTimerTask(), 1000, 1000);
 
             writeAudioDataToFile();
-
-
         }
     }
 
@@ -206,6 +206,7 @@ public class MyOpusRecorder {
         }
 
         if (null != recorder) {
+            Log.e(TAG , "stopping");
             opusTool.stopRecording();
             recordingThread = null;
             recorder.stop();

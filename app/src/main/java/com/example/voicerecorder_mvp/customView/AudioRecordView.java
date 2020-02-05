@@ -1,4 +1,4 @@
-package com.example.voicerecorder_mvp.custom_view;
+package com.example.voicerecorder_mvp.customView;
 
 import android.app.Activity;
 import android.content.Context;
@@ -449,8 +449,9 @@ public class AudioRecordView extends FrameLayout {
             imageViewStop.animate().scaleY(0f).scaleX(0f).setDuration(ANIMATION_DURATION).setInterpolator(new AccelerateInterpolator()).start();
 
             delete();
-
-            timerTask.cancel();
+            
+            if (timerTask != null)
+                timerTask.cancel();
             timerTask = null;
 
             recordingBehaviour = null;

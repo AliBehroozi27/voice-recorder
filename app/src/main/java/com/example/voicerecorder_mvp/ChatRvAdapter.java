@@ -110,9 +110,10 @@ public class ChatRvAdapter extends RecyclerView.Adapter<ChatRvAdapter.ViewHolder
             public void onProgressChanged(float progress, boolean fromUser) {
                 int position = (int)((progress / 100) * (float)voiceMessage.getDuration());
                 holder.timer.setText(presenter.calculateTime(position));
+                Log.e("AAA" , "progress : " + progress);
                 if (presenter.getMediaPlayer() != null && presenter.getVoiceMessage().getPath().equals(voiceMessage.getPath()) && fromUser) {
                     presenter.isUserSeeking = true;
-                    presenter.seek(position);
+                    presenter.seek(position , voiceMessage.getDuration());
                     voiceMessage.setLastProgress(position);
                 } else if (position == presenter.getPosition() || fromUser) {
                     voiceMessage.setLastProgress(position);
@@ -232,10 +233,11 @@ public class ChatRvAdapter extends RecyclerView.Adapter<ChatRvAdapter.ViewHolder
         private void updateSeekBar(ViewHolder holder) {
             this.holder = holder;
             if (presenter.getMediaPlayer() != null) {
-                int currentPosition = presenter.getMediaPlayer().getCurrentPosition();
-                if (currentPosition < presenter.getVoiceMessage().getLastProgress()){
-                    currentPosition = presenter.getVoiceMessage().getLastProgress();
-                }
+                Log.e("AAA" , "" + presenter.getMediaPlayer().getPosition() + "  " + ((double)presenter.getMediaPlayer().getPosition() / presenter.getMediaPlayer().getDuration()));
+                int currentPosition = (int)(presenter.getMediaPlayer().getPosition());
+//                if (currentPosition < presenter.getVoiceMessage().getLastProgress()){
+//                    currentPosition = presenter.getVoiceMessage().getLastProgress();
+//                }
                 this.holder.seekBar.setProgress(presenter.convertCurrentMediaPositionIntoPercent(currentPosition, presenter.getVoiceMessage().getDuration()));
                 presenter.getVoiceMessage().setLastProgress(currentPosition);
             }
@@ -249,7 +251,7 @@ public class ChatRvAdapter extends RecyclerView.Adapter<ChatRvAdapter.ViewHolder
 
         @Override
         public void startPlaying() {
-            presenter.seek(presenter.getLastProgress());
+            presenter.seek(presenter.getLastProgress() , presenter.getVoiceMessage().getDuration());
         }
 
         @Override

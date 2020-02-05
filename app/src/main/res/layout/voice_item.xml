@@ -27,7 +27,7 @@
                 android:layout_width="35dp"
                 android:layout_height="35dp"
                 android:layout_gravity="center"
-                android:src="@drawable/ic_play"
+                app:srcCompat="@drawable/ic_play"
                 android:tint="#DDDDDD" />
 
             <ProgressBar
@@ -72,7 +72,7 @@
 
                 <TextView
                     android:id="@+id/timer"
-                    android:layout_width="92dp"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_gravity="left|bottom"
                     android:layout_weight="1"
@@ -80,7 +80,7 @@
                     android:text="02:10"
                     android:textAppearance="?android:attr/textAppearanceSmall"
                     android:textColor="#FFFFFF"
-                    android:textSize="10.00sp" />
+                    android:textSize="10sp" />
 
                 <TextView
                     android:id="@+id/date"
@@ -91,7 +91,8 @@
                     android:text="03:50 am"
                     android:textAppearance="?android:attr/textAppearanceSmall"
                     android:textColor="#FFFFFF"
-                    android:textSize="10sp" />
+                    android:textSize="10sp"
+                    android:layout_marginEnd="8dp" />
 
 
             </LinearLayout>
@@ -104,12 +105,9 @@
             android:layout_gravity="center"
             android:layout_width="20dp"
             android:layout_height="20dp"
-            android:background="@drawable/ic_delete" />
+            app:srcCompat="@drawable/ic_delete" />
 
     </LinearLayout>
-
-
-
 </RelativeLayout>
 
 

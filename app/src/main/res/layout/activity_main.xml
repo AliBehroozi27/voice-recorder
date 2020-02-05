@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -8,23 +7,15 @@
     tools:context=".MainActivity">
 
 
-    <ScrollView
-        android:id="@+id/scrollView"
+    <android.support.v7.widget.RecyclerView
+        android:id="@+id/recycler_view"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:layout_constraintTop_toTopOf="parent"
-        android:fillViewport="true">
-
-        <android.support.v7.widget.RecyclerView
-            android:id="@+id/recycler_view"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            tools:itemCount="25"
+        android:layout_height="match_parent"
+        tools:itemCount="25"
             tools:listitem="@layout/voice_item" />
-    </ScrollView>
 
 
-    <com.example.voicerecorder_mvp.custom_view.AudioRecordView
+    <com.example.voicerecorder_mvp.customView.AudioRecordView
         android:id="@+id/recordingView"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />

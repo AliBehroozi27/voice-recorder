@@ -13,6 +13,7 @@ import android.util.Log;
 
 import com.example.voicerecorder_mvp.pojo.VoiceMessage;
 import com.example.voicerecorder_mvp.utils.MyOpusRecorder;
+import com.example.voicerecorder_mvp.utils.OpusPlayer;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -25,6 +26,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
+import top.oply.opuslib.OpusService;
+
+
 public class MainPresenter implements MainContract.Presenter {
 
     public static final int LOWER_LIMIT_RECORDING_TIME_MILLISECONDS = 900;
@@ -32,7 +36,7 @@ public class MainPresenter implements MainContract.Presenter {
     private static final int INITIAL_PROGRESS = 0;
     private static final int START_TIMER_DELAY = 0;
     private static final int UPPER_LIMIT_RECORDING_TIME_MILLISECONDS = 600000;
-    private static final String VOICE_FORMAT = ".ogg";
+    private static final String VOICE_FORMAT = ".opus";
     private static final String SAVING_PATH = "/VoiceRecorderSimplifiedCoding/Audios";
     private final Context context;
     boolean isUserSeeking = false;
@@ -41,7 +45,7 @@ public class MainPresenter implements MainContract.Presenter {
     private MyOpusRecorder mediaRecorder;
     private String fileName;
     private int position;
-    private MediaPlayer mediaPlayer;
+    private OpusPlayer mediaPlayer;
     private boolean isRecording;
     private boolean isPlaying = false;
     private CountDownTimer timer;
@@ -51,7 +55,7 @@ public class MainPresenter implements MainContract.Presenter {
     private boolean isPlayRecording;
     private int recordingDuration = -1;
     private int recordingLastProgress = 0;
-
+    
     @RequiresApi(api = Build.VERSION_CODES.M)
     public MainPresenter(MainActivity view , Context context) {
         this.view = view;
@@ -62,8 +66,8 @@ public class MainPresenter implements MainContract.Presenter {
     public void initViews() {
         view.initRecyclerView(voiceMessages);
     }
-
-    public MediaPlayer getMediaPlayer() {
+    
+    public OpusPlayer getMediaPlayer() {
         return mediaPlayer;
     }
 
@@ -89,40 +93,41 @@ public class MainPresenter implements MainContract.Presenter {
         fileName = Environment.getExternalStorageDirectory()+ SAVING_PATH + "/" + System.currentTimeMillis() + VOICE_FORMAT;
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void initialMediaPlayer() {
-        mediaPlayer = new MediaPlayer();
-        try {
-            if (isRecording || isPlayRecording) {
-                mediaPlayer.setDataSource(fileName);
-            } else {
-                mediaPlayer.setDataSource(voiceMessage.getPath());
-            }
-            mediaPlayer.prepare();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        mediaPlayer = OpusPlayer.getInstance();
 
-        mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-            @Override
-            public void onCompletion(MediaPlayer mp) {
-                stopPlay();
-                if (isPlayRecording) {
-                    stopPlayRecording();
-                    setRecordingLastProgress(0);
-                    view.stopPlayRecording();
-                } else {
-                    voiceMessage.setLastProgress(INITIAL_PROGRESS);
-                    voiceMessages.set(position, voiceMessage);
-                    adapterView.notifyItemChanged(position);
-                }
-            }
-        });
+//        try {
+//            if (isRecording || isPlayRecording) {
+//                mediaPlayer.setDataSource(fileName);
+//            } else {
+//                mediaPlayer.setDataSource(voiceMessage.getPath());
+//            }
+//            mediaPlayer.prepare();
+//            Log.e("AAA" , "prepare");
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+
+
+//        mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+//            @Override
+//            public void onCompletion(MediaPlayer mp) {
+//                stopPlay();
+//                if (isPlayRecording) {
+//                    stopPlayRecording();
+//                    setRecordingLastProgress(0);
+//                    view.stopPlayRecording();
+//                } else {
+//                    voiceMessage.setLastProgress(INITIAL_PROGRESS);
+//                    voiceMessages.set(position, voiceMessage);
+//                    adapterView.notifyItemChanged(position);
+//                }
+//            }
+//        });
 
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void startRecord() {
         mediaPlayer = null;
@@ -141,7 +146,6 @@ public class MainPresenter implements MainContract.Presenter {
     private void startTimer() {
         Handler handler = new Handler();
         handler.postDelayed(new Runnable() {
-            @RequiresApi(api = Build.VERSION_CODES.KITKAT)
             @Override
             public void run() {
                 if (timer != null) {
@@ -180,26 +184,37 @@ public class MainPresenter implements MainContract.Presenter {
         if (!file.exists()) {
             file.mkdirs();
         }
-        MediaMetadataRetriever mmr = new MediaMetadataRetriever();
 
         String path = Environment.getExternalStorageDirectory() + "/" +SAVING_PATH;
         File directory = new File(path);
         File[] files = directory.listFiles();
         for (File f : files) {
-            mmr.setDataSource(context, Uri.parse(f.getPath()));
             VoiceMessage voiceMessage = new VoiceMessage();
+            MediaMetadataRetriever mmr = new MediaMetadataRetriever();
+    
+            OpusPlayer opusPlayer = OpusPlayer.getInstance();
+            opusPlayer.setFile(f.getPath());
+    
+    
+            mmr.setDataSource(f.getPath());
             Date modifiedTime = new Date(f.lastModified());
             SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+    
             voiceMessage.setDateModified(sdf.format(modifiedTime.getTime()));
             voiceMessage.setPath(f.getPath());
-            voiceMessage.setDuration(Integer.parseInt(mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)));
+            String duration = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
+            String date = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DATE);
+    
+            Log.e("AAA", "dur : " + opusPlayer.getDuration());
+    
+            voiceMessage.setDuration((int) opusPlayer.getDuration());
             voiceMessage.setLastProgress(0);
             voiceMessages.add(voiceMessage);
+            mmr.release();
         }
     }
 
 
-    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void stopRecord() {
         Log.e("AAA", "stop");
@@ -212,6 +227,15 @@ public class MainPresenter implements MainContract.Presenter {
         isRecording = false;
         mediaRecorder = null;
         timer = null;
+    
+        OpusService.decode(context
+                , fileName
+                , Environment.getExternalStorageDirectory()
+                        + SAVING_PATH
+                        + "/decode"
+                        + System.currentTimeMillis()
+                        + ".wav"
+                , null);
     }
 
     @Override
@@ -225,7 +249,7 @@ public class MainPresenter implements MainContract.Presenter {
 
         VoiceMessage voiceMessage = new VoiceMessage();
         voiceMessage.setDateModified(sdf.format(modifiedTime.getTime()));
-        voiceMessage.setDuration(Integer.parseInt(mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)));
+        //voiceMessage.setDuration(Integer.parseInt(mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)));
         voiceMessage.setLastProgress(0);
         voiceMessage.setPath(fileName);
 
@@ -242,13 +266,13 @@ public class MainPresenter implements MainContract.Presenter {
             initialMediaPlayer();
         }
         if (mediaPlayer != null) {
-            mediaPlayer.seekTo(recordingLastProgress);
-            mediaPlayer.start();
+//            mediaPlayer.seekTo(recordingLastProgress);
+//            mediaPlayer.start();
+            mediaPlayer.seekOpusFile(recordingLastProgress);
+            mediaPlayer.play(fileName);
         }
-
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void startPlay(int position) {
         setPosition(position);
@@ -258,7 +282,7 @@ public class MainPresenter implements MainContract.Presenter {
         }
         if (mediaPlayer != null && !voiceMessage.isPlaying() && voiceMessage.getPath() != null) {
             voiceMessage.setPlaying(true);
-            mediaPlayer.start();
+            mediaPlayer.play(voiceMessage.getPath());
             adapterView.getViewHolder().startPlaying();
         }
     }
@@ -268,7 +292,9 @@ public class MainPresenter implements MainContract.Presenter {
         view.stopPlayRecording();
         setPlayRecording(false);
         if (mediaPlayer != null) {
-            recordingLastProgress = mediaPlayer.getCurrentPosition();
+//            recordingLastProgress = mediaPlayer.getCurrentPosition();
+            recordingLastProgress = (int) mediaPlayer.getPosition();
+            mediaPlayer.stop();
             try {
                 mediaPlayer.release();
             } catch (Exception e) {
@@ -282,8 +308,8 @@ public class MainPresenter implements MainContract.Presenter {
     public void stopPlay() {
         if (voiceMessage != null && mediaPlayer != null) {
             voiceMessage.setPlaying(false);
-            Log.e("AAA" , " stop :  " + mediaPlayer.getCurrentPosition());
-            voiceMessage.setLastProgress(mediaPlayer.getCurrentPosition());
+//            voiceMessage.setLastProgress(mediaPlayer.getCurrentPosition());
+            voiceMessage.setLastProgress((int) mediaPlayer.getPosition());
             try {
                 mediaPlayer.release();
             } catch (Exception e) {
@@ -291,17 +317,20 @@ public class MainPresenter implements MainContract.Presenter {
             }
             mediaPlayer = null;
             adapterView.getViewHolder().stopPlaying();
+    
         }
     }
 
     @Override
-    public void seek(int progress) {
-        mediaPlayer.seekTo(progress);
+    public void seek(int progress , int duration) {
+//        mediaPlayer.seekTo(progress);
+        Log.e("AAAA" , "last : " + (float)progress / duration);
+        float scale = (float)progress / duration;
+        mediaPlayer.seekOpusFile(scale);
         isUserSeeking = false;
     }
 
 
-    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void cancelRecording() {
         //Log.e("AAA" , "CANCEL " + mediaRecorder);
@@ -342,12 +371,9 @@ public class MainPresenter implements MainContract.Presenter {
     @Override
     public void deleteVoice() {
         stopPlay();
-        //Log.e("AAA", fileName + "o");
         File file = new File(fileName);
         if (file.exists()) {
-            //Log.e("AAA", "exits");
             if (file.delete()) {
-                //Log.e("AAA", "delete");
                 //adapterView.notifyDataSetChanged();
             }
         }
@@ -405,11 +431,26 @@ public class MainPresenter implements MainContract.Presenter {
         if (duration < 1) {
             return 0;
         }
+        if (mediaPlayer != null) {
+            Log.e("AAA", "" + mediaPlayer.isWorking());
+            if (!mediaPlayer.isWorking()) {
+                stopPlay();
+                if (isPlayRecording) {
+                    stopPlayRecording();
+                    setRecordingLastProgress(0);
+                    view.stopPlayRecording();
+                } else {
+                    voiceMessage.setLastProgress(INITIAL_PROGRESS);
+                    voiceMessages.set(position, voiceMessage);
+                    adapterView.notifyItemChanged(position);
+                }
+            }
+        }
         return (float)currentPosition * 100 / (float)duration;
     }
 
-    public String calculateTime(Integer duration) {
-        int seconds = duration / 1000;
+    public String calculateTime(Integer progress) {
+        int seconds = progress / OpusPlayer.SAMPLE_RATE_HRTZ;
         int minutes = seconds / 60;
         seconds = seconds - (minutes * 60);
         return minutes + ":" + checkSecondsDigit(seconds);

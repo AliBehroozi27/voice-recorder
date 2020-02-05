@@ -60,7 +60,7 @@ public interface MainContract {
 
         void initTimer();
 
-        void seek(int lastProgress);
+        void seek(int lastProgress , int duration);
 
         void cancelRecording();
 

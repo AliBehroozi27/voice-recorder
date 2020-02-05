@@ -17,7 +17,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
-import com.example.voicerecorder_mvp.custom_view.AudioRecordView;
+import com.example.voicerecorder_mvp.customView.AudioRecordView;
 import com.example.voicerecorder_mvp.pojo.VoiceMessage;
 
 import java.util.List;
@@ -29,9 +29,9 @@ import rm.com.audiowave.OnProgressListener;
 
 public class MainActivity extends AppCompatActivity implements MainContract.View , AudioRecordView.RecordingListener {
 
-
+    private static final String TAG = "MainActivity";
     @BindView(R.id.recycler_view)
-    RecyclerView messagesRv;
+    RecyclerView list;
     @BindView(R.id.recordingView)
     AudioRecordView audioRecordView;
     @BindString(R.string.start_time)
@@ -58,10 +58,8 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        //butter_knife bind
         ButterKnife.bind(this);
 
-        //initial views
         initViews();
 
         //init presenter
@@ -81,8 +79,8 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
             requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.RECORD_AUDIO, Manifest.permission.WRITE_EXTERNAL_STORAGE},
                     REQUEST_PERMISSION);
 
-        }else {
-            Log.e("AAA" , "" + (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED));
+        } else {
+            Log.e(TAG, "" + (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED));
             Log.e("AAA" , "" + (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED));
             Log.e("AAA" , "" + (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED));
         }
@@ -113,7 +111,7 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
     public void initViews() {
         audioRecordView.setRecordingListener(this);
 
-        ((SimpleItemAnimator) messagesRv.getItemAnimator()).setSupportsChangeAnimations(false);
+        ((SimpleItemAnimator) list.getItemAnimator()).setSupportsChangeAnimations(false);
 
 
         audioRecordView.getAttachmentView().setOnClickListener(new View.OnClickListener() {
@@ -161,7 +159,7 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
                 audioRecordView.getTimeText().setText(presenter.calculateTime(position));
                 if (presenter.getMediaPlayer() != null && fromUser) {
                     presenter.isUserSeeking = true;
-                    presenter.seek(position);
+                    presenter.seek(position , presenter.getRecordingDuration());
                     presenter.setRecordingLastProgress(position);
                 } else if (position == presenter.getPosition() || fromUser) {
                     presenter.setRecordingLastProgress(position);
@@ -171,7 +169,6 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
     }
 
 
-    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void prepareForRecording() {
        // messageArea.setText(START_TIME);
@@ -191,8 +188,8 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
     @Override
     public void initRecyclerView(List<VoiceMessage> voiceMessages) {
         chatAdapter = new ChatRvAdapter(this, voiceMessages, presenter);
-        messagesRv.setAdapter(chatAdapter);
-        messagesRv.setLayoutManager(new LinearLayoutManager(this));
+        list.setAdapter(chatAdapter);
+        list.setLayoutManager(new LinearLayoutManager(this));
         presenter.setAdapterView(chatAdapter);
     }
 
@@ -225,7 +222,6 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
     }
 
 
-    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void onRecordingStarted() {
         presenter.startRecord();
@@ -236,7 +232,6 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
 
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void onSendClick() {
         if (presenter.getTime() < MainPresenter.LOWER_LIMIT_RECORDING_TIME_MILLISECONDS ) {
@@ -252,7 +247,6 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
     }
 
 
-    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void onRecordingCompleted() {
         presenter.stopRecord();
@@ -263,7 +257,6 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
         audioRecordView.setWaveRawData(presenter.getRecordingRawData());}
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void onRecordingCanceled() {
         presenter.cancelRecording();
@@ -277,8 +270,9 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
     };
 
     private void updateSeekBar() {
+        
         if (presenter.getMediaPlayer() != null) {
-            int currentPosition = presenter.getMediaPlayer().getCurrentPosition();
+            int currentPosition = (int)presenter.getMediaPlayer().getPosition();
             if (currentPosition < presenter.getRecordingLastProgress()){
                 currentPosition = presenter.getRecordingLastProgress();
             }
@@ -289,7 +283,6 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
         mHandler.postDelayed(runnable, MainPresenter.SEEK_BAR_UPDATE_DELAY);
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     protected void onPause() {
         Log.e("AAA" , "onDestroy");
