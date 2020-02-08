@@ -1,16 +1,15 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/cardView"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:layout_margin="2dp"
+    android:id="@+id/parent_view"
     android:layout_marginStart="?android:attr/actionBarSize"
     android:layout_marginLeft="?android:attr/actionBarSize"
     android:background="@drawable/voice_chat">
 
     <LinearLayout
-        android:id="@+id/line1"
-        android:layout_width="200dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="start|center_vertical">
 
@@ -28,15 +27,24 @@
                 android:layout_height="35dp"
                 android:layout_gravity="center"
                 app:srcCompat="@drawable/ic_play"
+                android:visibility="invisible"
                 android:tint="#DDDDDD" />
 
-            <ProgressBar
-                android:id="@+id/progress_bar"
-                android:layout_width="30dp"
-                android:layout_height="30dp"
+            <ImageView
+                android:id="@+id/download_button"
+                android:layout_width="35dp"
+                android:layout_height="35dp"
                 android:layout_gravity="center"
-                android:visibility="gone" />
+                app:srcCompat="@drawable/ic_download" />
 
+            <ProgressBar
+                android:id="@+id/download_progress_bar"
+                android:layout_width="35dp"
+                android:layout_height="35dp"
+                android:layout_gravity="center"
+                android:progress="0"
+                android:indeterminate="false"
+                android:visibility="invisible" />
         </FrameLayout>
 
         <LinearLayout

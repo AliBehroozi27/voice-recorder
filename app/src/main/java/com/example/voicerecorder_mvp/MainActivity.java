@@ -5,7 +5,6 @@ import android.annotation.SuppressLint;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.annotation.RequiresApi;
 import android.support.v4.content.ContextCompat;
@@ -49,7 +48,6 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
     private float positionY,positionX;
     private MainPresenter presenter;
     private ChatRvAdapter chatAdapter;
-    private Handler mHandler = new Handler();
 
 
     @RequiresApi(api = Build.VERSION_CODES.M)
@@ -112,8 +110,7 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
         audioRecordView.setRecordingListener(this);
 
         ((SimpleItemAnimator) list.getItemAnimator()).setSupportsChangeAnimations(false);
-
-
+        
         audioRecordView.getAttachmentView().setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -129,15 +126,16 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
         });
 
         audioRecordView.getPlay().setOnClickListener(new View.OnClickListener() {
-            @RequiresApi(api = Build.VERSION_CODES.KITKAT)
             @Override
             public void onClick(View v) {
-                if (presenter.isPlayRecording()) {
-                    presenter.stopPlayRecording();
-                    mHandler.removeCallbacks(runnable);
-                } else {
-                    presenter.startPlayRecording();
-                    updateSeekBar();
+                if (!presenter.isPlaying()) {
+                    if (presenter.isPlayRecording()) {
+                        presenter.stopPlayRecording();
+                        presenter.removeRecordingSeekBarUpdateCallbacks();
+                    } else {
+                        presenter.startPlayRecording();
+                        presenter.updateRecordingOverviewSeekBar();
+                    }
                 }
             }
         });
@@ -145,12 +143,10 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
         audioRecordView.getWave().setOnProgressListener(new OnProgressListener() {
             @Override
             public void onStartTracking(float v) {
-
             }
 
             @Override
             public void onStopTracking(float v) {
-
             }
 
             @Override
@@ -168,21 +164,17 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
         });
     }
 
-
     @Override
     public void prepareForRecording() {
-       // messageArea.setText(START_TIME);
     }
 
     @Override
     public void startRecording() {
-        presenter.setTime(0);
     }
 
 
     @Override
     public void cancelRecording() {
-        presenter.setTime(0);
     }
 
     @Override
@@ -196,7 +188,6 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
     @Override
     public void setShadowScale(double pressure) {
         float p = getShadowScale((float)pressure);
-        //Log.e("AAA" , "" + (p));
         audioRecordView.getImageViewShadow().animate().scaleY(p).scaleX(p).setDuration(500).start();
     }
 
@@ -208,19 +199,21 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
     @Override
     public void stopPlayRecording() {
         audioRecordView.getPlay().setImageResource(R.drawable.ic_play_white);
-        audioRecordView.getWave().setProgress(presenter.convertCurrentMediaPositionIntoPercent(presenter.getRecordingLastProgress(), presenter.getRecordingDuration()));
-        mHandler.removeCallbacks(runnable);
     }
 
     @Override
     public void updateRecordingPlaySeekBar(int progress) {
-
+        audioRecordView.getWave().setProgress(presenter.convertCurrentMediaPositionIntoPercent(progress, presenter.getRecordingDuration()));
     }
-
+    
+    @Override
+    public AudioRecordView getRecordingView() {
+        return audioRecordView;
+    }
+    
     private float getShadowScale(float pressure){
         return pressure / 1300 > 0.5 ? (float) 1.5 : pressure / 1300 + 1 < 1.3 ? 1 : pressure / 1300 + 1;
     }
-
 
     @Override
     public void onRecordingStarted() {
@@ -229,13 +222,13 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
 
     @Override
     public void onRecordingLocked() {
-
     }
 
     @Override
     public void onSendClick() {
-        if (presenter.getTime() < MainPresenter.LOWER_LIMIT_RECORDING_TIME_MILLISECONDS ) {
-            //presenter.cancelRecording();
+        Log.e("AAA" , "time : " + audioRecordView.getRecordingTime() + "  lim : " + MainPresenter.LOWER_LIMIT_RECORDING_TIME_MILLISECONDS);
+        if (audioRecordView.getRecordingTime() < MainPresenter.LOWER_LIMIT_RECORDING_TIME_MILLISECONDS) {
+            presenter.cancelRecording();
         } else {
             presenter.sendVoice();
         }
@@ -245,44 +238,25 @@ public class MainActivity extends AppCompatActivity implements MainContract.View
     public void onDeleteClick() {
         presenter.deleteVoice();
     }
-
-
+    
     @Override
     public void onRecordingCompleted() {
         presenter.stopRecord();
-        if(presenter.getTime() < MainPresenter.LOWER_LIMIT_RECORDING_TIME_MILLISECONDS && !presenter.isRecording()){
+        if (audioRecordView.getRecordingTime() < MainPresenter.LOWER_LIMIT_RECORDING_TIME_MILLISECONDS && !presenter.isRecording()) {
             audioRecordView.delete();
             presenter.deleteVoice();
         }else {
-        audioRecordView.setWaveRawData(presenter.getRecordingRawData());}
+            audioRecordView.setWaveRawData(presenter.getRecordingRawData());
+            audioRecordView.getWave().setProgress(0);
+        }
     }
 
     @Override
     public void onRecordingCanceled() {
         presenter.cancelRecording();
     }
-
-    Runnable runnable = new Runnable() {
-        @Override
-        public void run() {
-            updateSeekBar();
-        }
-    };
-
-    private void updateSeekBar() {
-        
-        if (presenter.getMediaPlayer() != null) {
-            int currentPosition = (int)presenter.getMediaPlayer().getPosition();
-            if (currentPosition < presenter.getRecordingLastProgress()){
-                currentPosition = presenter.getRecordingLastProgress();
-            }
-            Log.e("AAA" , ""+currentPosition+"  "+presenter.getRecordingDuration());
-            audioRecordView.getWave().setProgress(presenter.convertCurrentMediaPositionIntoPercent(currentPosition, presenter.getRecordingDuration()));
-            presenter.setRecordingLastProgress(currentPosition);
-        }
-        mHandler.postDelayed(runnable, MainPresenter.SEEK_BAR_UPDATE_DELAY);
-    }
-
+    
+    
     @Override
     protected void onPause() {
         Log.e("AAA" , "onDestroy");

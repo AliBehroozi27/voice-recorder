@@ -3,6 +3,7 @@ package com.example.voicerecorder_mvp.utils;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
+import android.support.annotation.StyleableRes;
 import android.util.Log;
 
 import java.nio.ByteBuffer;
@@ -237,20 +238,12 @@ public class OpusPlayer {
      * @return duration
      */
     public long getDuration() {
-//        ByteBuffer buffer = ByteBuffer.allocateDirect(bufferSize);
-//        libLock.lock();
-//        opusLib.readOpusFile(buffer, bufferSize);
-//        int size = opusLib.getSize();
-//        libLock.unlock();
-//        if (size != 0) {
-//            buffer.rewind();
-//            byte[] data = new byte[size];
-//            buffer.get(data);
-//            Log.e("AAA" , "size : " + size + " buffer " + buffer.toString());
-//
-//            audioTrack.write(data, 0, size);
-//        }
         return opusLib.getTotalPcmDuration();
+    }
+    
+    public int getDuration(String path) {
+        setFile(path);
+        return (int)opusLib.getTotalPcmDuration();
     }
     
     

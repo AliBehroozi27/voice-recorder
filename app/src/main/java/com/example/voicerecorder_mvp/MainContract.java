@@ -1,5 +1,6 @@
 package com.example.voicerecorder_mvp;
 
+import com.example.voicerecorder_mvp.customView.AudioRecordView;
 import com.example.voicerecorder_mvp.pojo.VoiceMessage;
 
 import java.io.IOException;
@@ -10,12 +11,14 @@ public interface MainContract {
         void startPlaying();
 
         void stopPlaying();
+        
+        void notifyLastItem();
     }
 
 
     interface View {
         void initViews();
-
+        
         void getPermission();
 
         void prepareForRecording();
@@ -33,6 +36,8 @@ public interface MainContract {
         void stopPlayRecording();
 
         void updateRecordingPlaySeekBar(int progress);
+        
+        AudioRecordView getRecordingView();
     }
 
     interface Presenter {
@@ -49,7 +54,6 @@ public interface MainContract {
 
         void stopRecord();
 
-
         String checkSecondsDigit(int number);
 
         String checkMilliSecondsDigit(int number);
@@ -57,9 +61,7 @@ public interface MainContract {
         void startPlay(int position);
 
         void stopPlay();
-
-        void initTimer();
-
+        
         void seek(int lastProgress , int duration);
 
         void cancelRecording();

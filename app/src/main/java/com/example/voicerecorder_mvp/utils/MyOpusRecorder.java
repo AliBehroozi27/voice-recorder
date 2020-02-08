@@ -136,6 +136,7 @@ public class MyOpusRecorder {
 
         finalBuffer.rewind();
         boolean flush = false;
+        
         //write data to Opus file
         while (state == STATE_STARTED && finalBuffer.hasRemaining()) {
             int oldLimit = -1;

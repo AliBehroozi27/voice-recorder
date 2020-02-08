@@ -9,13 +9,17 @@ import android.support.annotation.NonNull;
 import android.support.annotation.RequiresApi;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import com.example.voicerecorder_mvp.pojo.VoiceMessage;
+import com.example.voicerecorder_mvp.utils.OpusPlayer;
 
 import java.util.List;
 
@@ -39,8 +43,9 @@ public class ChatRvAdapter extends RecyclerView.Adapter<ChatRvAdapter.ViewHolder
     private boolean isPlaying;
     private int last_index = -1;
     private ViewHolder viewHolder;
-
-
+    private int dp = 0;
+    
+    
     public ViewHolder getViewHolder() {
         return viewHolder;
     }
@@ -76,22 +81,48 @@ public class ChatRvAdapter extends RecyclerView.Adapter<ChatRvAdapter.ViewHolder
 
         holder.seekBar.setProgress(presenter.convertCurrentMediaPositionIntoPercent(voiceMessage.getLastProgress(), voiceMessage.getDuration()));
         holder.dateModified.setText(voiceMessage.getDateModified());
-
-        if (voiceMessage.isPlaying()) {
+    
+        if (presenter.isRecording()) {
+            voiceMessage.setLastProgress(0);
+            holder.seekBar.setProgress(voiceMessage.getLastProgress());
+            holder.playButton.setImageResource(R.drawable.ic_play);
+        } else if (voiceMessage.isPlaying()) {
+            // if current voice is playing
             holder.playButton.setImageResource(R.drawable.ic_pause);
             holder.updateSeekBar(holder);
         } else {
+            holder.playButton.setImageResource(R.drawable.ic_play);
             if (presenter.isPlaying()) {
+                // if another voice is playing
                 voiceMessage.setLastProgress(0);
                 holder.seekBar.setProgress(voiceMessage.getLastProgress());
             }
-            holder.playButton.setImageResource(R.drawable.ic_play);
-
             if (voiceMessage.getLastProgress() == 0) {
                 holder.timer.setText(presenter.calculateTime(voiceMessage.getDuration()));
             }
         }
-
+    
+        dp = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 1, context.getResources().getDisplayMetrics());
+        float dur = (float) voiceMessage.getDuration() / OpusPlayer.SAMPLE_RATE_HRTZ;
+        Log.e("AAA", "dur : " + dur);
+        if (dur < 2) {
+            holder.setParentWidth(ViewHolder.BASE_WIDTH * dp);
+        } else if (dur < 3) {
+            holder.setParentWidth((ViewHolder.BASE_WIDTH + ViewHolder.OFFSET_WIDTH) * dp);
+        
+        } else if (dur < 4) {
+            holder.setParentWidth((ViewHolder.BASE_WIDTH + (2 * ViewHolder.OFFSET_WIDTH)) * dp);
+        
+        } else if (dur < 5) {
+            holder.setParentWidth((ViewHolder.BASE_WIDTH + (3 * ViewHolder.OFFSET_WIDTH)) * dp);
+        
+        } else if (dur < 6) {
+            holder.setParentWidth((ViewHolder.BASE_WIDTH + (4 * ViewHolder.OFFSET_WIDTH)) * dp);
+        
+        } else {
+            holder.setParentWidth((ViewHolder.BASE_WIDTH + (5 * ViewHolder.OFFSET_WIDTH)) * dp);
+        }
+        
         bindEvents(holder, voiceMessage, position);
     }
 
@@ -144,6 +175,8 @@ public class ChatRvAdapter extends RecyclerView.Adapter<ChatRvAdapter.ViewHolder
 
 
     public class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener, MainContract.Adapter {
+        public static final int BASE_WIDTH = 180;
+        public static final int OFFSET_WIDTH = 20;
         @BindView(R.id.play_button)
         ImageView playButton;
         @BindView(R.id.seek_bar)
@@ -152,14 +185,21 @@ public class ChatRvAdapter extends RecyclerView.Adapter<ChatRvAdapter.ViewHolder
         TextView dateModified;
         @BindView(R.id.timer)
         TextView timer;
+        @BindView(R.id.download_progress_bar)
+        ProgressBar downloadProgressBar;
         @BindView(R.id.delete)
         ImageView deleteIcon;
+        @BindView(R.id.download_button)
+        ImageView downloadButton;
+        @BindView(R.id.parent_view)
+        RelativeLayout parentView;
 
         private int position;
         private ViewHolder holder;
-        private Handler mHandler = new Handler();
-
-
+        private Handler handler = new Handler();
+        private Handler downloadHandler = new Handler();
+    
+    
         ViewHolder(View itemView) {
             super(itemView);
             ButterKnife.bind(this, itemView);
@@ -174,6 +214,15 @@ public class ChatRvAdapter extends RecyclerView.Adapter<ChatRvAdapter.ViewHolder
                     int deletingVoicePosition = getAdapterPosition();
                     presenter.deleteVoice(deletingVoicePosition);
                 }});
+    
+            downloadButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    downloadProgressBar.setVisibility(View.VISIBLE);
+                    updateDownloadProgressBar();
+                }
+            });
+            
 
             playButton.setOnClickListener(new View.OnClickListener() {
                 @RequiresApi(api = Build.VERSION_CODES.KITKAT)
@@ -181,7 +230,7 @@ public class ChatRvAdapter extends RecyclerView.Adapter<ChatRvAdapter.ViewHolder
                 public void onClick(View view) {
                     position = getAdapterPosition();
                     VoiceMessage voiceMessage = getItem(position);
-                    if (!presenter.isRecording()) {
+                    if (!presenter.isRecording() && !presenter.isPlayRecording()) {
                         if (voiceMessage.isPlaying()) {
                             if (position == last_index) {
                                 voiceMessage.setPlaying(false);
@@ -222,6 +271,25 @@ public class ChatRvAdapter extends RecyclerView.Adapter<ChatRvAdapter.ViewHolder
                 }
             });
         }
+    
+        Runnable fakeDownloadRunnable = new Runnable() {
+            @Override
+            public void run() {
+                viewHolder.updateDownloadProgressBar();
+            }
+        };
+    
+        private void updateDownloadProgressBar() {
+            if (downloadProgressBar.getProgress() < 95) {
+                Log.e("aaa" , downloadProgressBar.getProgress() + "" );
+                downloadProgressBar.setProgress(downloadProgressBar.getProgress() + 5);
+                downloadHandler.postDelayed(fakeDownloadRunnable, 5);
+            } else {
+                downloadProgressBar.setVisibility(View.INVISIBLE);
+                downloadButton.setVisibility(View.INVISIBLE);
+                playButton.setVisibility(View.VISIBLE);
+            }
+        }
 
         Runnable runnable = new Runnable() {
             @Override
@@ -233,15 +301,17 @@ public class ChatRvAdapter extends RecyclerView.Adapter<ChatRvAdapter.ViewHolder
         private void updateSeekBar(ViewHolder holder) {
             this.holder = holder;
             if (presenter.getMediaPlayer() != null) {
-                Log.e("AAA" , "" + presenter.getMediaPlayer().getPosition() + "  " + ((double)presenter.getMediaPlayer().getPosition() / presenter.getMediaPlayer().getDuration()));
                 int currentPosition = (int)(presenter.getMediaPlayer().getPosition());
-//                if (currentPosition < presenter.getVoiceMessage().getLastProgress()){
-//                    currentPosition = presenter.getVoiceMessage().getLastProgress();
-//                }
                 this.holder.seekBar.setProgress(presenter.convertCurrentMediaPositionIntoPercent(currentPosition, presenter.getVoiceMessage().getDuration()));
                 presenter.getVoiceMessage().setLastProgress(currentPosition);
+                handler.postDelayed(runnable, MainPresenter.SEEK_BAR_UPDATE_DELAY);
             }
-            mHandler.postDelayed(runnable, MainPresenter.SEEK_BAR_UPDATE_DELAY);
+        }
+    
+        public void setParentWidth(int width) {
+            RecyclerView.LayoutParams params = (RecyclerView.LayoutParams) parentView.getLayoutParams();
+            params.width = width;
+            parentView.setLayoutParams(params);
         }
 
         @Override
@@ -256,8 +326,13 @@ public class ChatRvAdapter extends RecyclerView.Adapter<ChatRvAdapter.ViewHolder
 
         @Override
         public void stopPlaying() {
-            mHandler.removeCallbacks(runnable);
+            if (handler != null)
+                handler.removeCallbacks(runnable);
         }
-
+    
+        @Override
+        public void notifyLastItem() {
+            notifyItemChanged(last_index);
+        }
     }
 }

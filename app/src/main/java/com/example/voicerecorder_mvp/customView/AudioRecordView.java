@@ -37,6 +37,7 @@ public class AudioRecordView extends FrameLayout {
 
     private static final int ANIMATION_DURATION = 200;
     private static final float LOCK_LAYOUT_TRANSLATION_Y = 200;
+    private static final long HANDLER_DELAY = 100;
     private static int WIDTH;
     private float normalScaleY;
     private ConstraintLayout.LayoutParams arrowParams;
@@ -465,7 +466,7 @@ public class AudioRecordView extends FrameLayout {
                 public void run() {
                     imageViewStop.setVisibility(View.GONE);
                 }
-            }, 100);
+            }, HANDLER_DELAY);
 
         } else if (recordingBehaviour == RecordingBehaviour.RELEASED) {
             timeText.clearAnimation();
@@ -508,7 +509,7 @@ public class AudioRecordView extends FrameLayout {
                 public void run() {
                     imageViewStop.setVisibility(GONE);
                 }
-            }, 100);
+            }, HANDLER_DELAY);
 
 
         } else if (recordingBehaviour == RecordingBehaviour.SEND) {
@@ -539,7 +540,7 @@ public class AudioRecordView extends FrameLayout {
                     cancel.setVisibility(GONE);
                     imageViewDelete.setVisibility(GONE);
                 }
-            }, 100);
+            }, HANDLER_DELAY);
 
             isLocked = false;
 
@@ -643,7 +644,7 @@ public class AudioRecordView extends FrameLayout {
                 cancel.setVisibility(GONE);
                 imageViewDelete.setVisibility(GONE);
             }
-        }, 100);
+        }, HANDLER_DELAY);
     }
 
     public void setWaveRawData(byte[] raw){
@@ -693,4 +694,6 @@ public class AudioRecordView extends FrameLayout {
     public EditText getMessageView() {
         return editTextMessage;
     }
+    
+    public int getRecordingTime(){ return audioTotalTime * 1000;}
 }
