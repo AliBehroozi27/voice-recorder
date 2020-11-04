@@ -189,8 +189,6 @@ public class ChatRvAdapter extends RecyclerView.Adapter<ChatRvAdapter.ViewHolder
         ProgressBar downloadProgressBar;
         @BindView(R.id.delete)
         ImageView deleteIcon;
-        @BindView(R.id.download_button)
-        ImageView downloadButton;
         @BindView(R.id.parent_view)
         RelativeLayout parentView;
 
@@ -214,15 +212,6 @@ public class ChatRvAdapter extends RecyclerView.Adapter<ChatRvAdapter.ViewHolder
                     int deletingVoicePosition = getAdapterPosition();
                     presenter.deleteVoice(deletingVoicePosition);
                 }});
-    
-            downloadButton.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    downloadProgressBar.setVisibility(View.VISIBLE);
-                    updateDownloadProgressBar();
-                }
-            });
-            
 
             playButton.setOnClickListener(new View.OnClickListener() {
                 @RequiresApi(api = Build.VERSION_CODES.KITKAT)
@@ -270,25 +259,6 @@ public class ChatRvAdapter extends RecyclerView.Adapter<ChatRvAdapter.ViewHolder
                     }
                 }
             });
-        }
-    
-        Runnable fakeDownloadRunnable = new Runnable() {
-            @Override
-            public void run() {
-                viewHolder.updateDownloadProgressBar();
-            }
-        };
-    
-        private void updateDownloadProgressBar() {
-            if (downloadProgressBar.getProgress() < 95) {
-                Log.e("aaa" , downloadProgressBar.getProgress() + "" );
-                downloadProgressBar.setProgress(downloadProgressBar.getProgress() + 5);
-                downloadHandler.postDelayed(fakeDownloadRunnable, 5);
-            } else {
-                downloadProgressBar.setVisibility(View.INVISIBLE);
-                downloadButton.setVisibility(View.INVISIBLE);
-                playButton.setVisibility(View.VISIBLE);
-            }
         }
 
         Runnable runnable = new Runnable() {
